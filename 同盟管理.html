@@ -7,18 +7,19 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔</text></svg>">
 <title>同盟管理 · 三国志战略版</title>
 <script src="xlsx.full.min.js"></script>
+<script src="铜矿内置数据.js"></script>
 <style>
   :root{
-    --bg:#0f1219;
-    --panel:#171b25;
-    --panel2:#1d2230;
-    --border:#2a3040;
-    --gold:#c9a24b;
-    --gold-bright:#e8c97a;
-    --text:#e8e6e1;
-    --muted:#8b90a0;
-    --green:#5aa97a;
-    --red:#d06565;
+    --bg:#f3efe6;
+    --panel:#fdfbf5;
+    --panel2:#ffffff;
+    --border:#e5dcc5;
+    --gold:#b8860b;
+    --gold-bright:#c9a24b;
+    --text:#2d2a23;
+    --muted:#8a8578;
+    --green:#3f8f5f;
+    --red:#b04a3a;
     --blue:#5a8fc9;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -31,7 +32,7 @@
   header{
     padding:20px 22px 14px;
     border-bottom:1px solid var(--border);
-    background:linear-gradient(180deg,#1a1f2c,#12151e);
+    background:linear-gradient(180deg,#faf5e8,#f0e7d2);
   }
   header h1{
     font-size:22px;
@@ -56,7 +57,7 @@
     display:flex;
     gap:4px;
     padding:10px 22px 0;
-    background:#12151e;
+    background:#f6f1e4;
     border-bottom:1px solid var(--border);
     position:sticky;top:0;z-index:5;
     overflow-x:auto;
@@ -113,7 +114,7 @@
     outline:none;
   }
   input:focus,select:focus,textarea:focus{border-color:var(--gold);}
-  input::placeholder{color:#5d6270;}
+  input::placeholder{color:#a89f8c;}
   .btn{
     background:var(--panel2);
     border:1px solid var(--border);
@@ -128,12 +129,13 @@
   }
   .btn:hover{border-color:var(--gold);color:var(--gold-bright);}
   .btn-gold{
-    background:linear-gradient(180deg,#d9b45f,#b8913c);
+    background:linear-gradient(180deg,#e0bd68,#b8913c);
     border-color:#a58030;
-    color:#241d0a;
+    color:#fff;
     font-weight:600;
+    box-shadow:0 2px 0 #8a6d2c,0 3px 8px rgba(0,0,0,.18);
   }
-  .btn-gold:hover{filter:brightness(1.08);color:#241d0a;}
+  .btn-gold:hover{filter:brightness(1.08);color:#fff;}
   .btn-danger{border-color:#7a3b3b;color:var(--red);}
   .btn-danger:hover{border-color:var(--red);background:#2a1818;}
   .btn-sm{padding:4px 10px;font-size:13px;border-radius:5px;}
@@ -215,7 +217,7 @@
   .header-tools{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;}
   .login-overlay{
     position:fixed;inset:0;z-index:100;
-    background:radial-gradient(circle at 50% 30%,#1c2231,#0e1118 70%);
+    background:radial-gradient(circle at 50% 30%,#f7f1e2,#e9dfc6 70%);
     display:flex;align-items:center;justify-content:center;
     padding:20px;
   }
@@ -345,7 +347,7 @@
 <body>
 <header>
   <h1 id="appTitle">⚔ 同盟管理</h1>
-  <p>三国志战略版 · 成员 / 领地 / 数据对比一站式管理（数据保存在本浏览器，可随时导出备份）</p>
+  <p>三国志战略版 · 成员 / 铜矿 / 数据对比一站式管理（数据保存在本浏览器，可随时导出备份）</p>
   <div class="head-stats" id="headStats"></div>
   <div class="header-tools">
     <span class="head-stat" id="allianceBadge"></span>
@@ -356,7 +358,7 @@
 <nav id="tabs">
   <button data-tab="profile" class="active">概况</button>
   <button data-tab="members">成员管理</button>
-  <button data-tab="territory">领地管理</button>
+  <button data-tab="territory">铜矿管理</button>
   <button data-tab="compare">数据对比</button>
   <button data-tab="data">数据管理</button>
 </nav>
@@ -375,9 +377,6 @@
         </label>
         <label>赛季
           <input type="text" id="pSeason" placeholder="例如：S4">
-        </label>
-        <label>同盟等级
-          <input type="number" id="pLevel" placeholder="例如：50">
         </label>
       </div>
       <div class="form-row">
@@ -438,49 +437,46 @@
     </div>
   </section>
 
-  <!-- 领地管理 -->
+  <!-- 铜矿管理 -->
   <section class="tab" id="tab-territory">
     <div class="card">
-      <h2>领地一览</h2>
+      <h2>铜矿一览</h2>
       <div class="toolbar">
         <input type="text" id="terrSearch" placeholder="搜索坐标 / 成员 / 小组 / 备注…">
-        <select id="terrTypeFilter">
-          <option value="">全部类型</option>
-          <option>铜矿</option>
-          <option>资源地</option>
-        </select>
-        <button class="btn btn-gold" onclick="openTerrForm()">＋ 添加领地</button>
+        <button class="btn btn-gold" onclick="importBuiltinTerritory()">一键导入内置铜矿</button>
+        <button class="btn btn-gold" onclick="openTerrForm()">＋ 添加铜矿</button>
+        <button class="btn btn-danger" onclick="clearTerritory()">清空全部</button>
       </div>
       <table>
         <thead>
           <tr>
             <th>坐标</th>
-            <th>类型</th>
-              <th>等级</th>
-              <th>归属成员</th>
-              <th>小组</th>
-              <th>备注</th>
-              <th>操作</th>
+            <th>等级</th>
+            <th>归属成员</th>
+            <th>小组</th>
+            <th>备注</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody id="terrRows"></tbody>
       </table>
-      <div class="empty" id="terrEmpty" style="display:none;">暂无领地记录，点击「添加领地」开始</div>
+      <div class="empty" id="terrEmpty" style="display:none;">暂无铜矿数据，点「一键导入内置铜矿」或「添加铜矿」开始</div>
     </div>
     <div class="card">
-      <h2>导入铜矿坐标表</h2>
+      <h2>导入铜矿数据</h2>
       <div class="data-actions">
         <label class="btn" style="cursor:pointer;">
           📄 选择文件
           <input type="file" id="terrFile" accept=".xlsx,.xls,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" style="display:none;">
         </label>
+        <button class="btn btn-gold" onclick="importBuiltinTerritory()">一键导入内置铜矿</button>
       </div>
       <textarea class="notice-box" id="terrText" placeholder="也可以粘贴 CSV / 文本：含「坐标」或 x、y 表头的表格，或每行一个坐标（如 123,456）…"></textarea>
       <div class="form-row">
         <button class="btn btn-gold" onclick="importTerritoryFromText()">导入铜矿</button>
       </div>
       <div class="hint">
-        直接选择「九州兵兴铜矿海王表」这类 xlsx 文件即可：自动识别多个工作表，填入坐标（x,y）、等级、所属州郡、分配小组、分配成员；CSV / 文本同样支持。重复坐标自动跳过。
+        支持 xlsx / CSV / 文本：自动识别多个工作表，填入坐标（x,y）、等级、所属州郡、分配小组、分配成员；重复坐标自动跳过。也可以直接用「一键导入内置铜矿」载入全部 3698 个铜矿坐标。
       </div>
     </div>
   </section>
@@ -680,7 +676,7 @@ let modalCb = null;
 const STATUS_BADGE = {
   '活跃': 'b-active', '潜水': 'b-mute', '请假': 'b-leave', '已退出': 'b-out'
 };
-const TERR_TYPES = ['铜矿','资源地'];
+const TERR_TYPES = ['铜矿'];
 
 function $(s){ return document.querySelector(s); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -936,9 +932,8 @@ function openTerrForm(id){
   const ownerSet = new Set(state.members.map(m => m.name));
   state.members.forEach(m => ownerOptions.push({value: m.name, label: m.name}));
   if(t && t.owner && !ownerSet.has(t.owner)) ownerOptions.push({value: t.owner, label: t.owner});
-  openModal(t ? '编辑领地' : '添加领地', [
+  openModal(t ? '编辑铜矿' : '添加铜矿', [
     {key:'coord', label:'坐标', placeholder:'例如：123,456'},
-    {key:'type', label:'类型', type:'select', options:TERR_TYPES},
     {key:'tier', label:'等级', type:'number', placeholder:'1-10'},
     {key:'owner', label:'归属成员', type:'searchSelect', options: ownerOptions, placeholder:'输入几个字筛选成员…'},
     {key:'group', label:'分配小组', placeholder:'主力 / 开荒…'},
@@ -964,10 +959,31 @@ function openTerrForm(id){
 }
 function deleteTerr(id){
   const t = state.territory.find(x => x.id === id);
-  if(t && confirm('确定删除该领地记录吗？')){
+  if(t && confirm('确定删除该铜矿记录吗？')){
     state.territory = state.territory.filter(x => x.id !== id);
     save(); renderTerritory();
   }
+}
+
+function importBuiltinTerritory(){
+  if(typeof BUILTIN_COPPER === 'undefined' || !Array.isArray(BUILTIN_COPPER)){
+    alert('内置铜矿数据文件缺失（请确认 铜矿内置数据.js 与网页在同一个文件夹）');
+    return;
+  }
+  const items = BUILTIN_COPPER.map(it => ({
+    coord: it.coord, tier: it.tier || 0, type: '铜矿',
+    group: it.group || '', owner: it.owner || '', note: it.note || ''
+  }));
+  if(!confirm('将导入内置铜矿坐标 ' + items.length + ' 条，重复坐标自动跳过。继续吗？')) return;
+  reportImport(importTerritory(items));
+}
+function clearTerritory(){
+  if(!state.territory.length){ alert('当前没有铜矿数据'); return; }
+  if(!confirm('确定清空全部铜矿数据吗？此操作不可恢复！')) return;
+  if(!confirm('再次确认：清空后将无法恢复，需要时可重新「一键导入内置铜矿」。确定继续吗？')) return;
+  state.territory = [];
+  save(); renderTerritory();
+  alert('已清空全部铜矿数据');
 }
 
 /* ---------- 铜矿坐标导入 ---------- */
@@ -1060,7 +1076,7 @@ function reportImport(r){
 function importTerritoryFromText(){
   const text = $('#terrText').value;
   if(!text.trim()){ alert('请先选择文件或粘贴坐标'); return; }
-  if(!confirm('将按坐标导入领地，重复坐标自动跳过。继续吗？')) return;
+  if(!confirm('将按坐标导入铜矿，重复坐标自动跳过。继续吗？')) return;
   const items = parseTerritoryText(text);
   if(!items.length){ alert('没有解析到坐标，请检查格式'); return; }
   reportImport(importTerritory(items));
@@ -1090,7 +1106,7 @@ $('#terrFile').addEventListener('change', async e => {
   }
   if(!items || !items.length){
     alert('没有解析到坐标，请检查文件格式');
-  }else if(confirm('将按坐标导入领地，重复坐标自动跳过。继续吗？')){
+  }else if(confirm('将按坐标导入铜矿，重复坐标自动跳过。继续吗？')){
     reportImport(importTerritory(items));
   }
   e.target.value = '';
@@ -1123,7 +1139,7 @@ function renderHeadStats(){
     '<span class="head-stat">活跃 <b>'+active+'</b></span>' +
     '<span class="head-stat">平均势力 <b>'+avgPower+'</b></span>' +
     '<span class="head-stat">总贡献 <b>'+totalContrib+'</b></span>' +
-    '<span class="head-stat">领地 <b>'+state.territory.length+'</b></span>';
+    '<span class="head-stat">铜矿 <b>'+state.territory.length+'</b></span>';
   const t = state.profile.name;
   $('#appTitle').textContent = t ? '⚔ ' + t : '⚔ 同盟管理';
   $('#allianceBadge').textContent = alliance ? '当前同盟：' + alliance : '';
@@ -1165,15 +1181,13 @@ function renderMembers(){
 
 function renderTerritory(){
   const q = ($('#terrSearch').value || '').trim().toLowerCase();
-  const tp = $('#terrTypeFilter').value;
   const list = state.territory.filter(t =>
-    (!q || (t.coord||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (t.group||'').toLowerCase().includes(q) || (t.note||'').toLowerCase().includes(q)) &&
-    (!tp || t.type === tp)
+    (t.type || '铜矿') === '铜矿' &&
+    (!q || (t.coord||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (t.group||'').toLowerCase().includes(q) || (t.note||'').toLowerCase().includes(q))
   );
   $('#terrRows').innerHTML = list.map(t => `
     <tr>
       <td><b>${esc(t.coord) || '-'}</b>${t.coord ? `<button class="op-btn" onclick="copyCoord('${esc(t.coord)}', this)">复制</button>` : ''}</td>
-      <td><span class="badge b-kind-${esc(t.type)}">${esc(t.type || '土地')}</span></td>
       <td>${t.tier || '-'}</td>
       <td>${esc(t.owner) || '-'}</td>
       <td>${esc(t.group) || '-'}</td>
@@ -1192,7 +1206,6 @@ function renderProfile(){
   $('#pName').value = state.profile.name || '';
   $('#pServer').value = state.profile.server || '';
   $('#pSeason').value = state.profile.season || '';
-  $('#pLevel').value = state.profile.level || '';
   $('#pNotice').value = state.notice || '';
   const active = state.members.filter(m => m.status === '活跃').length;
   const groups = new Set(state.members.map(m => (m.group || '').trim()).filter(Boolean)).size;
@@ -1200,15 +1213,14 @@ function renderProfile(){
     '<div class="stat-box"><div class="num">'+state.members.length+'</div><div class="lbl">成员总数</div></div>' +
     '<div class="stat-box"><div class="num">'+active+'</div><div class="lbl">活跃成员</div></div>' +
     '<div class="stat-box"><div class="num">'+groups+'</div><div class="lbl">分组数</div></div>' +
-    '<div class="stat-box"><div class="num">'+state.territory.length+'</div><div class="lbl">领地记录</div></div>';
+    '<div class="stat-box"><div class="num">'+state.territory.length+'</div><div class="lbl">铜矿记录</div></div>';
   renderHeadStats();
 }
 function saveProfile(){
   state.profile = {
     name: $('#pName').value.trim(),
     server: $('#pServer').value.trim(),
-    season: $('#pSeason').value.trim(),
-    level: $('#pLevel').value.trim()
+    season: $('#pSeason').value.trim()
   };
   save(); renderProfile();
   alert('同盟信息已保存');
@@ -1338,7 +1350,8 @@ function judgeRow(r, meritTh, contrTh){
 }
 function memberGroup(name){
   const m = state.members.find(x => x.name === name);
-  return (m && m.group && m.group.trim()) ? m.group.trim() : '未分组';
+  const g = m ? [m.group, m.clan].filter(Boolean).map(x => String(x).trim()).filter(Boolean).join(' · ') : '';
+  return g || '未分组';
 }
 function buildCompareRows(){
   if(!cmpA || !cmpB) return null;
@@ -1645,7 +1658,7 @@ function loadSample(){
     state.territory = [
       {id:uid(), coord:'573,1211', type:'铜矿', tier:10, owner:'', group:'主力', note:'关中-汉中郡'},
       {id:uid(), coord:'590,1031', type:'铜矿', tier:10, owner:'', group:'开荒', note:'关中-汉中郡'},
-      {id:uid(), coord:'318,475', type:'资源地', tier:8, owner:'锦帆贼', group:'', note:'西线入口'}
+      {id:uid(), coord:'318,475', type:'铜矿', tier:8, owner:'锦帆贼', group:'', note:'西线入口'}
     ];
     save(); renderAll();
     alert('已载入示例数据');
@@ -1672,7 +1685,6 @@ document.querySelectorAll('nav button').forEach(b => b.addEventListener('click',
 $('#memberSearch').addEventListener('input', renderMembers);
 $('#memberStatusFilter').addEventListener('change', renderMembers);
 $('#terrSearch').addEventListener('input', renderTerritory);
-$('#terrTypeFilter').addEventListener('change', renderTerritory);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
 
 function renderAll(){
