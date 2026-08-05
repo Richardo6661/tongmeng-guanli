@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#12151e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔</text></svg>">
+<title>同盟管理 · 三国志战略版</title>
+<style>
+  :root{
+    --bg:#0f1219;
+    --panel:#171b25;
+    --panel2:#1d2230;
+    --border:#2a3040;
+    --gold:#c9a24b;
+    --gold-bright:#e8c97a;
+    --text:#e8e6e1;
+    --muted:#8b90a0;
+    --green:#5aa97a;
+    --red:#d06565;
+    --blue:#5a8fc9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    min-height:100vh;
+  }
+  header{
+    padding:20px 22px 14px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#1a1f2c,#12151e);
+  }
+  header h1{
+    font-size:22px;
+    letter-spacing:2px;
+    color:var(--gold-bright);
+    font-weight:600;
+  }
+  header p{color:var(--muted);font-size:13px;margin-top:4px;}
+  .head-stats{
+    display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;
+  }
+  .head-stat{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:6px 14px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .head-stat b{color:var(--gold-bright);font-size:16px;margin-left:4px;}
+  nav{
+    display:flex;
+    gap:4px;
+    padding:10px 22px 0;
+    background:#12151e;
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:5;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  nav button{
+    background:transparent;
+    border:1px solid transparent;
+    border-bottom:none;
+    color:var(--muted);
+    padding:10px 18px;
+    font-size:15px;
+    cursor:pointer;
+    border-radius:8px 8px 0 0;
+    font-family:inherit;
+    white-space:nowrap;
+    flex:none;
+  }
+  nav button:hover{color:var(--text);}
+  nav button.active{
+    background:var(--panel);
+    border-color:var(--border);
+    color:var(--gold-bright);
+    font-weight:600;
+  }
+  main{padding:20px 22px 60px;max-width:1100px;margin:0 auto;}
+  .tab{display:none;}
+  .tab.active{display:block;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-size:16px;
+    color:var(--gold-bright);
+    margin-bottom:12px;
+    letter-spacing:1px;
+  }
+  .toolbar{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    margin-bottom:12px;
+  }
+  input,select,textarea{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:14px;
+    font-family:inherit;
+    outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+  input::placeholder{color:#5d6270;}
+  .btn{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 16px;
+    border-radius:6px;
+    font-size:14px;
+    cursor:pointer;
+    font-family:inherit;
+    transition:all .15s;
+    touch-action:manipulation;
+  }
+  .btn:hover{border-color:var(--gold);color:var(--gold-bright);}
+  .btn-gold{
+    background:linear-gradient(180deg,#d9b45f,#b8913c);
+    border-color:#a58030;
+    color:#241d0a;
+    font-weight:600;
+  }
+  .btn-gold:hover{filter:brightness(1.08);color:#241d0a;}
+  .btn-danger{border-color:#7a3b3b;color:var(--red);}
+  .btn-danger:hover{border-color:var(--red);background:#2a1818;}
+  .btn-sm{padding:4px 10px;font-size:13px;border-radius:5px;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  th,td{
+    padding:9px 10px;
+    text-align:left;
+    border-bottom:1px solid var(--border);
+  }
+  th{
+    color:var(--muted);
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+    user-select:none;
+  }
+  th:hover{color:var(--gold-bright);}
+  th .arrow{font-size:11px;margin-left:3px;color:var(--gold);}
+  tr:hover td{background:rgba(201,162,75,.04);}
+  .badge{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:20px;
+    font-size:12px;
+    white-space:nowrap;
+  }
+  .b-active{background:rgba(90,169,122,.15);color:var(--green);border:1px solid rgba(90,169,122,.4);}
+  .b-mute{background:rgba(139,144,160,.12);color:var(--muted);border:1px solid rgba(139,144,160,.35);}
+  .b-leave{background:rgba(90,143,201,.12);color:var(--blue);border:1px solid rgba(90,143,201,.4);}
+  .b-out{background:rgba(208,101,101,.12);color:var(--red);border:1px solid rgba(208,101,101,.4);}
+  .b-kind-攻城{background:rgba(208,101,101,.12);color:var(--red);border:1px solid rgba(208,101,101,.4);}
+  .b-kind-集结{background:rgba(201,162,75,.14);color:var(--gold-bright);border:1px solid rgba(201,162,75,.45);}
+  .b-kind-活动{background:rgba(90,143,201,.12);color:var(--blue);border:1px solid rgba(90,143,201,.4);}
+  .b-kind-其他{background:rgba(139,144,160,.12);color:var(--muted);border:1px solid rgba(139,144,160,.35);}
+  .b-kind-换防{background:rgba(90,169,122,.12);color:var(--green);border:1px solid rgba(90,169,122,.4);}
+  .b-kind-铜矿{background:rgba(201,162,75,.16);color:var(--gold-bright);border:1px solid rgba(201,162,75,.45);}
+  .b-kind-资源地{background:rgba(90,169,122,.14);color:var(--green);border:1px solid rgba(90,169,122,.4);}
+  .empty{
+    color:var(--muted);
+    text-align:center;
+    padding:36px 0;
+    font-size:14px;
+  }
+  .op-btn{
+    background:none;border:none;color:var(--blue);cursor:pointer;
+    font-size:13px;padding:2px 6px;font-family:inherit;
+  }
+  .op-btn.del{color:var(--red);}
+  .op-btn:hover{text-decoration:underline;}
+  .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  .profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;}
+  .profile-grid label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;}
+  .profile-grid input{width:100%;}
+  .notice-box{width:100%;min-height:90px;margin-top:8px;}
+  .b-role-盟主{background:rgba(208,101,101,.16);color:#ff9a9a;border:1px solid rgba(208,101,101,.5);}
+  .b-role-副盟主{background:rgba(201,162,75,.18);color:var(--gold-bright);border:1px solid rgba(201,162,75,.5);}
+  .b-role-指挥官{background:rgba(90,143,201,.15);color:#8ab4e8;border:1px solid rgba(90,143,201,.45);}
+  .b-role-官员{background:rgba(90,143,201,.10);color:var(--blue);border:1px solid rgba(90,143,201,.35);}
+  .b-role-精英{background:rgba(90,169,122,.12);color:var(--green);border:1px solid rgba(90,169,122,.4);}
+  .b-role-成员{background:rgba(139,144,160,.12);color:var(--muted);border:1px solid rgba(139,144,160,.35);}
+  .note-cell{color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:6px;}
+  .delta-pos{color:var(--green);}
+  .delta-neg{color:var(--red);}
+  .delta-zero{color:var(--muted);}
+  .cmp-src{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    border:1px dashed var(--border);border-radius:8px;padding:12px;
+    margin-bottom:10px;
+  }
+  .cmp-src .info{font-size:13px;color:var(--muted);}
+  .cmp-src .info b{color:var(--gold-bright);}
+  .bar{height:12px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#8a6d2c,#e8c97a);border-radius:6px;}
+  .stat-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
+  }
+  .stat-box{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:12px 14px;
+  }
+  .stat-box .num{font-size:22px;color:var(--gold-bright);font-weight:600;}
+  .stat-box .lbl{font-size:12px;color:var(--muted);margin-top:2px;}
+  .event-row{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:8px;
+    background:var(--panel2);
+  }
+  .event-row.done{opacity:.55;}
+  .event-row .title{flex:1;font-size:14px;}
+  .event-row .title .t{font-weight:600;}
+  .event-row .title .m{color:var(--muted);font-size:12px;margin-top:3px;}
+  .event-row .time{color:var(--gold-bright);font-size:13px;white-space:nowrap;}
+  .data-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .hint{
+    color:var(--muted);font-size:13px;line-height:1.7;margin-top:10px;
+  }
+  .hint code{
+    background:var(--panel2);padding:2px 6px;border-radius:4px;color:var(--gold-bright);
+  }
+  /* modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.6);
+    display:none;align-items:center;justify-content:center;z-index:50;
+    padding:20px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    width:100%;max-width:460px;
+    padding:20px;
+    max-height:86vh;
+    overflow-y:auto;
+  }
+  .modal h3{
+    color:var(--gold-bright);font-size:17px;margin-bottom:16px;
+    letter-spacing:1px;
+  }
+  .mf-row{display:block;margin-bottom:12px;}
+  .mf-row span{
+    display:block;font-size:13px;color:var(--muted);margin-bottom:5px;
+  }
+  .mf-row input,.mf-row select,.mf-row textarea{width:100%;}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+  .sort-hint{font-size:12px;color:var(--muted);margin-bottom:8px;}
+  @media(max-width:720px){
+    header{padding:14px 14px 10px;}
+    header h1{font-size:19px;}
+    header p{font-size:12px;}
+    .head-stat{padding:5px 10px;font-size:12px;}
+    nav{
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      padding:8px 10px 0;
+      flex-wrap:nowrap;
+    }
+    nav button{
+      padding:9px 12px;
+      font-size:14px;
+      white-space:nowrap;
+      flex:none;
+    }
+    main{padding:12px 10px 40px;}
+    .card{padding:12px;border-radius:8px;}
+    .card h2{font-size:15px;margin-bottom:10px;}
+    input,select,textarea{font-size:16px;padding:10px 10px;}
+    .btn{min-height:40px;}
+    .btn-sm{min-height:0;}
+    table{font-size:13px;}
+    th,td{padding:7px 8px;}
+    .op-btn{min-height:0;padding:4px 6px;}
+    .stat-box .num{font-size:19px;}
+    .modal{padding:16px;}
+    .event-row{flex-wrap:wrap;}
+    .event-row .time{width:100%;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="appTitle">⚔ 同盟管理</h1>
+  <p>三国志战略版 · 成员 / 领地 / 事件一站式管理（数据保存在本浏览器，可随时导出备份）</p>
+  <div class="head-stats" id="headStats"></div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="profile" class="active">概况</button>
+  <button data-tab="members">成员管理</button>
+  <button data-tab="territory">领地管理</button>
+  <button data-tab="compare">数据对比</button>
+  <button data-tab="data">数据管理</button>
+</nav>
+
+<main>
+  <!-- 概况 -->
+  <section class="tab active" id="tab-profile">
+    <div class="card">
+      <h2>同盟信息</h2>
+      <div class="profile-grid">
+        <label>同盟名称
+          <input type="text" id="pName" placeholder="例如：龙腾天下">
+        </label>
+        <label>区服
+          <input type="text" id="pServer" placeholder="例如：S1">
+        </label>
+        <label>赛季
+          <input type="text" id="pSeason" placeholder="例如：S4">
+        </label>
+        <label>同盟等级
+          <input type="number" id="pLevel" placeholder="例如：50">
+        </label>
+      </div>
+      <div class="form-row">
+        <button class="btn btn-gold" onclick="saveProfile()">保存同盟信息</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>同盟公告</h2>
+      <textarea class="notice-box" id="pNotice" placeholder="写点公告，例如：今晚 20:00 攻占襄阳，19:30 全员集合…"></textarea>
+      <div class="form-row">
+        <button class="btn btn-gold" onclick="saveNotice()">保存公告</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>快捷统计</h2>
+      <div class="stat-grid" id="profileStats"></div>
+    </div>
+  </section>
+
+  <!-- 成员管理 -->
+  <section class="tab active" id="tab-members">
+    <div class="card">
+      <h2>成员列表</h2>
+      <div class="toolbar">
+        <input type="text" id="memberSearch" placeholder="搜索昵称 / 备注…">
+        <select id="memberStatusFilter">
+          <option value="">全部状态</option>
+          <option>活跃</option>
+          <option>潜水</option>
+          <option>请假</option>
+          <option>已退出</option>
+        </select>
+        <button class="btn btn-gold" onclick="openMemberForm()">＋ 添加成员</button>
+      </div>
+      <div class="sort-hint">点击表头可排序</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="name">昵称<span class="arrow"></span></th>
+              <th>职务</th>
+              <th>分组 / 门阀</th>
+              <th data-sort="power">势力值<span class="arrow"></span></th>
+              <th data-sort="contribution">贡献总量<span class="arrow"></span></th>
+              <th data-sort="meritTotal">战功总量<span class="arrow"></span></th>
+              <th data-sort="contributionWeek">贡献本周<span class="arrow"></span></th>
+              <th data-sort="meritWeek">战功本周<span class="arrow"></span></th>
+              <th>所属州</th>
+              <th data-sort="status">状态<span class="arrow"></span></th>
+              <th>备注</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="memberRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="memberEmpty" style="display:none;">暂无成员，点击「添加成员」开始</div>
+    </div>
+  </section>
+
+  <!-- 领地管理 -->
+  <section class="tab" id="tab-territory">
+    <div class="card">
+      <h2>领地一览</h2>
+      <div class="toolbar">
+        <input type="text" id="terrSearch" placeholder="搜索坐标 / 成员 / 备注…">
+        <select id="terrTypeFilter">
+          <option value="">全部类型</option>
+          <option>铜矿</option>
+          <option>资源地</option>
+        </select>
+        <button class="btn btn-gold" onclick="openTerrForm()">＋ 添加领地</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>坐标</th>
+            <th>类型</th>
+            <th>等级</th>
+            <th>归属成员</th>
+            <th>占领日期</th>
+            <th>备注</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="terrRows"></tbody>
+      </table>
+      <div class="empty" id="terrEmpty" style="display:none;">暂无领地记录，点击「添加领地」开始</div>
+    </div>
+    <div class="card">
+      <h2>导入铜矿坐标表</h2>
+      <div class="data-actions">
+        <label class="btn" style="cursor:pointer;">
+          📄 选择文件
+          <input type="file" id="terrFile" accept=".csv,.txt,text/csv,text/plain" style="display:none;">
+        </label>
+      </div>
+      <textarea class="notice-box" id="terrText" placeholder="粘贴铜矿坐标表：含「坐标」表头的表格，或每行一个坐标（如 123,456）…"></textarea>
+      <div class="form-row">
+        <button class="btn btn-gold" onclick="importTerritoryFromText()">导入铜矿</button>
+      </div>
+      <div class="hint">
+        导入后类型自动为「铜矿」，重复坐标自动跳过；表格里如有「等级」「产量 / 守军」等列会自动填入对应字段。
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据对比 -->
+  <section class="tab" id="tab-compare">
+    <div class="card">
+      <h2>选择对比文件</h2>
+      <div class="cmp-src" id="cmpSrcA">
+        <span style="color:var(--muted);font-size:13px;">时间点 ①（旧）</span>
+        <label class="btn btn-sm" style="cursor:pointer;">
+          选择文件
+          <input type="file" id="cmpFileA" accept=".json,.csv,application/json,text/csv" style="display:none;">
+        </label>
+        <button class="btn btn-sm" onclick="useCurrentAs('A')">用当前应用数据</button>
+        <span class="info" id="cmpInfoA">未选择（支持应用备份 JSON 或游戏统计 CSV）</span>
+      </div>
+      <div class="cmp-src" id="cmpSrcB">
+        <span style="color:var(--muted);font-size:13px;">时间点 ②（新）</span>
+        <label class="btn btn-sm" style="cursor:pointer;">
+          选择文件
+          <input type="file" id="cmpFileB" accept=".json,.csv,application/json,text/csv" style="display:none;">
+        </label>
+        <button class="btn btn-sm" onclick="useCurrentAs('B')">用当前应用数据</button>
+        <span class="info" id="cmpInfoB">未选择</span>
+      </div>
+      <div class="form-row">
+        <button class="btn" onclick="swapCompare()">⇄ 交换两个时间点</button>
+        <button class="btn btn-gold" onclick="renderCompare()">开始对比</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>判定规则</h2>
+      <div class="form-grid">
+        <label>战功增量 ≥ 视为「参战」
+          <input type="number" id="cmpMeritTh" value="10000" min="0">
+        </label>
+        <label>贡献增量 ≥ 视为「有参与」
+          <input type="number" id="cmpContrTh" value="500000" min="0">
+        </label>
+      </div>
+      <div class="hint">
+        判定参考：战功变化 ≥ 阈值 → 参战；战功有增加但不足 → 有行动；战功未变但贡献增加 → 贡献为主；
+        两者都几乎没变 → 未参战。势力值上升/下降仅作参考（可能占地或丢地）。阈值可按你们同盟的实际情况调整。
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>分组合格统计</h2>
+      <div class="hint" style="margin-top:0;">
+        合格 = 判定为「参战」或「有行动」（战功有增加）。分组按当前应用数据里的成员分组匹配，未匹配到的归入「未分组」。
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>分组</th>
+              <th>人数</th>
+              <th>合格</th>
+              <th>合格率</th>
+            </tr>
+          </thead>
+          <tbody id="cmpGroupRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="cmpGroupEmpty" style="display:none;">选择两个时间点并开始对比后显示</div>
+    </div>
+
+    <div class="card">
+      <h2>对比结果</h2>
+      <div class="stat-grid" id="cmpStats"></div>
+      <div class="toolbar" style="margin-top:12px;">
+        <select id="cmpGroup">
+          <option value="">全部分组</option>
+        </select>
+        <select id="cmpFilter">
+          <option value="">全部成员</option>
+          <option value="active">仅看参战 / 有行动</option>
+          <option value="idle">仅看未参战</option>
+          <option value="moved">仅看有变化</option>
+          <option value="joinleave">新增 / 退出</option>
+        </select>
+        <select id="cmpSort">
+          <option value="merit">按战功变化</option>
+          <option value="contribution">按贡献变化</option>
+          <option value="power">按势力变化</option>
+          <option value="name">按姓名</option>
+        </select>
+        <button class="btn btn-gold" onclick="exportCompareCSV()">⬇ 导出对比结果</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>成员</th>
+              <th>分组</th>
+              <th>贡献 ①</th>
+              <th>贡献 ②</th>
+              <th>贡献变化</th>
+              <th>战功 ①</th>
+              <th>战功 ②</th>
+              <th>战功变化</th>
+              <th>势力 ①</th>
+              <th>势力 ②</th>
+              <th>势力变化</th>
+              <th>判定</th>
+            </tr>
+          </thead>
+          <tbody id="cmpRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="cmpEmpty" style="display:none;">选择两个时间点的文件后点击「开始对比」</div>
+    </div>
+  </section>
+
+  <!-- 数据管理 -->
+  <section class="tab" id="tab-data">
+    <div class="card">
+      <h2>数据管理</h2>
+      <div class="data-actions">
+        <button class="btn btn-gold" onclick="exportData()">⬇ 导出备份（JSON）</button>
+        <label class="btn" style="cursor:pointer;">
+          ⬆ 导入备份
+          <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
+        </label>
+        <button class="btn" onclick="loadSample()">载入示例数据</button>
+        <button class="btn btn-danger" onclick="clearData()">清空全部数据</button>
+      </div>
+      <div class="hint">
+        数据保存在当前浏览器的本地存储中，换浏览器或清理浏览器数据会丢失。<br>
+        建议定期「导出备份」保存为文件；换设备时在新浏览器中「导入备份」即可恢复。
+      </div>
+    </div>
+    <div class="card">
+      <h2>导入同盟统计（CSV）</h2>
+      <div class="data-actions">
+        <label class="btn" style="cursor:pointer;">
+          📄 选择 CSV 文件
+          <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none;">
+        </label>
+      </div>
+      <textarea class="notice-box" id="csvText" placeholder="也可以把游戏「同盟统计」页复制的内容直接粘贴到这里（第一行需包含表头）…"></textarea>
+      <div class="form-row">
+        <button class="btn btn-gold" onclick="importCSVFromText()">导入数据</button>
+      </div>
+      <div class="hint">
+        按成员名导入或更新：贡献、战功、助攻、捐献（本周与总量）、势力值、所属州、门阀会自动填充；
+        你手动填写的职务、分组、等级、状态、备注会保留。
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">表单</h3>
+    <div id="modalBody"></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-gold" id="modalSubmit">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'sgs_union_mgr_v1';
+let state = {
+  profile: { name: '', server: '', season: '', level: '' },
+  notice: '',
+  members: [],
+  territory: []
+};
+let sort = { key: 'power', dir: -1 };
+let modalCb = null;
+
+const STATUS_BADGE = {
+  '活跃': 'b-active', '潜水': 'b-mute', '请假': 'b-leave', '已退出': 'b-out'
+};
+const TERR_TYPES = ['铜矿','资源地'];
+
+function $(s){ return document.querySelector(s); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+function fmtDate(iso){ if(!iso) return ''; const d = new Date(iso); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDT(iso){ if(!iso) return ''; const d = new Date(iso); return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function nowLocalInput(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+
+function save(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      state = {
+        profile: Object.assign({name:'',server:'',season:'',level:''}, s.profile || {}),
+        notice: s.notice || '',
+        members: Array.isArray(s.members) ? s.members : [],
+        territory: Array.isArray(s.territory) ? s.territory : []
+      };
+    }
+  }catch(e){
+    console.warn('读取本地数据失败', e);
+  }
+}
+
+/* ---------- 通用弹窗 ---------- */
+function openModal(title, fields, values, cb){
+  $('#modalTitle').textContent = title;
+  const body = $('#modalBody');
+  body.innerHTML = fields.map(f => {
+    const id = 'mf_' + f.key;
+    let input;
+    if(f.type === 'select'){
+      input = '<select id="'+id+'">' + f.options.map(o => '<option>'+esc(o)+'</option>').join('') + '</select>';
+    }else if(f.type === 'textarea'){
+      input = '<textarea id="'+id+'" rows="2" placeholder="'+(f.placeholder||'')+'"></textarea>';
+    }else{
+      input = '<input type="'+(f.type||'text')+'" id="'+id+'" placeholder="'+(f.placeholder||'')+'"'+(f.required?' required':'')+'>';
+    }
+    return '<label class="mf-row"><span>'+esc(f.label)+'</span>'+input+'</label>';
+  }).join('');
+  fields.forEach(f => {
+    const el = $('#mf_' + f.key);
+    if(el && values && values[f.key] != null) el.value = values[f.key];
+  });
+  modalCb = cb;
+  $('#modal').classList.add('show');
+}
+function closeModal(){
+  $('#modal').classList.remove('show');
+  modalCb = null;
+}
+function submitModal(){
+  const fields = ['mf_name','mf_role','mf_group','mf_level','mf_power','mf_contribution',
+                  'mf_contributionWeek','mf_meritWeek','mf_assistWeek','mf_donateWeek',
+                  'mf_meritTotal','mf_assistTotal','mf_donateTotal','mf_state','mf_clan',
+                  'mf_attacks','mf_status','mf_note',
+                  'mf_coord','mf_type','mf_tier','mf_owner','mf_date','mf_kind','mf_title','mf_datetime','mf_target',
+                  'mf_city','mf_result','mf_participants'];
+  const data = {};
+  fields.forEach(k => {
+    const el = $('#'+k);
+    if(el) data[k.replace('mf_','')] = el.value.trim();
+  });
+  if(modalCb) modalCb(data);
+  closeModal();
+}
+$('#modalSubmit').addEventListener('click', submitModal);
+$('#modal').addEventListener('click', e => { if(e.target.id === 'modal') closeModal(); });
+
+/* ---------- 成员 ---------- */
+function openMemberForm(id){
+  const m = id ? state.members.find(x => x.id === id) : null;
+  const numKeys = ['power','contribution','contributionWeek','meritWeek','assistWeek','donateWeek','meritTotal','assistTotal','donateTotal','attacks'];
+  openModal(m ? '编辑成员' : '添加成员', [
+    {key:'name', label:'游戏昵称', required:true, placeholder:'例如：江东小霸王'},
+    {key:'role', label:'职务', type:'select', options:['成员','精英','官员','指挥官','副盟主','盟主']},
+    {key:'group', label:'分组', placeholder:'主力 / 开荒 / 后勤…'},
+    {key:'power', label:'势力值', type:'number'},
+    {key:'contribution', label:'贡献总量', type:'number'},
+    {key:'contributionWeek', label:'贡献本周', type:'number'},
+    {key:'meritTotal', label:'战功总量', type:'number'},
+    {key:'meritWeek', label:'战功本周', type:'number'},
+    {key:'assistTotal', label:'助攻总量', type:'number'},
+    {key:'assistWeek', label:'助攻本周', type:'number'},
+    {key:'donateTotal', label:'捐献总量', type:'number'},
+    {key:'donateWeek', label:'捐献本周', type:'number'},
+    {key:'state', label:'所属州', placeholder:'司隶 / 荆州 / 关中…'},
+    {key:'clan', label:'门阀', placeholder:'将军府 / 无门阀…'},
+    {key:'attacks', label:'攻城次数', type:'number'},
+    {key:'status', label:'状态', type:'select', options:['活跃','潜水','请假','已退出']},
+    {key:'note', label:'备注', placeholder:'阵容 / 队伍信息…'}
+  ], m, data => {
+    if(!data.name){ alert('请填写游戏昵称'); return; }
+    if(m){
+      Object.assign(m, data);
+      numKeys.forEach(k => { if(m[k] != null) m[k] = num(m[k]); });
+    }else{
+      const member = {
+        id: uid(),
+        name: data.name,
+        role: data.role || '成员',
+        group: data.group,
+        status: data.status || '活跃',
+        note: data.note
+      };
+      numKeys.forEach(k => { member[k] = num(data[k]); });
+      member.state = data.state;
+      member.clan = data.clan;
+      state.members.push(member);
+    }
+    save(); renderMembers();
+  });
+}
+function deleteMember(id){
+  const m = state.members.find(x => x.id === id);
+  if(m && confirm('确定删除成员「' + m.name + '」吗？')){
+    state.members = state.members.filter(x => x.id !== id);
+    save(); renderMembers();
+  }
+}
+
+/* ---------- 领地 ---------- */
+function openTerrForm(id){
+  const t = id ? state.territory.find(x => x.id === id) : null;
+  openModal(t ? '编辑领地' : '添加领地', [
+    {key:'coord', label:'坐标', placeholder:'例如：123,456'},
+    {key:'type', label:'类型', type:'select', options:TERR_TYPES},
+    {key:'tier', label:'等级', type:'number', placeholder:'1-10'},
+    {key:'owner', label:'归属成员', placeholder:'输入成员昵称'},
+    {key:'date', label:'占领日期', type:'date'},
+    {key:'note', label:'备注', placeholder:'资源州 / 分城…'}
+  ], t, data => {
+    if(!data.coord && !data.owner){ alert('请至少填写坐标或归属成员'); return; }
+    if(t){
+      Object.assign(t, data, {tier:num(data.tier)});
+    }else{
+      state.territory.push({
+        id: uid(),
+        coord: data.coord,
+        type: data.type || '土地',
+        tier: num(data.tier),
+        owner: data.owner,
+        date: data.date,
+        note: data.note
+      });
+    }
+    save(); renderTerritory();
+  });
+}
+function deleteTerr(id){
+  const t = state.territory.find(x => x.id === id);
+  if(t && confirm('确定删除该领地记录吗？')){
+    state.territory = state.territory.filter(x => x.id !== id);
+    save(); renderTerritory();
+  }
+}
+
+/* ---------- 铜矿坐标导入 ---------- */
+function extractCoord(s){
+  if(s == null) return null;
+  const t = String(s).trim().replace(/\s+/g, '');
+  if(!t) return null;
+  const nums = t.match(/\d+/g);
+  return (nums && nums.length >= 2) ? nums[0] + ',' + nums[1] : null;
+}
+function parseTerritoryText(text){
+  const parsed = parseCSV(text);
+  const headerIdx = parsed.findIndex(r => r.some(c => /坐标|座标|铜矿/.test(c)));
+  const out = [];
+  if(headerIdx >= 0){
+    const header = parsed[headerIdx].map(h => h.trim());
+    const iCoord = header.findIndex(h => /坐标|座标|铜矿/.test(h));
+    const iTier = header.findIndex(h => /等级|级别/.test(h));
+    const iNote = header.findIndex(h => /产量|守军|兵力|备注|战法|强度/.test(h));
+    for(let i = headerIdx + 1; i < parsed.length; i++){
+      const r = parsed[i];
+      let coord = iCoord >= 0 ? extractCoord(r[iCoord]) : null;
+      if(!coord) coord = extractCoord(r.join(','));
+      if(!coord) continue;
+      out.push({coord: coord, tier: iTier >= 0 ? num(r[iTier]) : 0, note: (iNote >= 0 && r[iNote]) ? r[iNote] : ''});
+    }
+  }else{
+    parsed.forEach(r => {
+      const coord = r.length === 1 ? extractCoord(r[0]) : extractCoord(r.join(','));
+      if(coord) out.push({coord: coord, tier: 0, note: ''});
+    });
+  }
+  return out;
+}
+function importTerritory(items){
+  let added = 0, skipped = 0;
+  const seen = new Set();
+  items.forEach(it => {
+    if(seen.has(it.coord)){ skipped++; return; }
+    seen.add(it.coord);
+    if(state.territory.some(t => t.coord === it.coord && t.type === '铜矿')){ skipped++; return; }
+    state.territory.push({id: uid(), type: '铜矿', coord: it.coord, tier: it.tier, owner: '', date: '', note: it.note});
+    added++;
+  });
+  save(); renderTerritory();
+  return {added: added, skipped: skipped};
+}
+function importTerritoryFromText(){
+  const text = $('#terrText').value;
+  if(!text.trim()){ alert('请先选择文件或粘贴铜矿坐标'); return; }
+  if(!confirm('将按坐标导入为「铜矿」类型，重复坐标自动跳过。继续吗？')) return;
+  const items = parseTerritoryText(text);
+  if(!items.length){ alert('没有解析到坐标，请检查格式（每行一个坐标，如 123,456）'); return; }
+  const r = importTerritory(items);
+  alert('导入完成：新增 ' + r.added + ' 个铜矿，跳过重复 ' + r.skipped + ' 个');
+}
+$('#terrFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    $('#terrText').value = reader.result;
+    if(confirm('将按坐标导入为「铜矿」类型，重复坐标自动跳过。继续吗？')){
+      const items = parseTerritoryText(reader.result);
+      if(!items.length){
+        alert('没有解析到坐标，请检查文件格式');
+      }else{
+        const r = importTerritory(items);
+        alert('导入完成：新增 ' + r.added + ' 个铜矿，跳过重复 ' + r.skipped + ' 个');
+      }
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ---------- 渲染 ---------- */
+function sortRows(arr){
+  const {key, dir} = sort;
+  return [...arr].sort((a,b) => {
+    let x = a[key], y = b[key];
+    if(x == null) x = ''; if(y == null) y = '';
+    if(typeof x === 'number' && typeof y === 'number') return dir * (x - y);
+    return dir * String(x).localeCompare(String(y), 'zh');
+  });
+}
+function setSort(key){
+  if(sort.key === key){ sort.dir = -sort.dir; } else { sort.key = key; sort.dir = -1; }
+  renderMembers();
+}
+document.querySelectorAll('#tab-members th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => setSort(th.dataset.sort));
+});
+
+function renderHeadStats(){
+  const active = state.members.filter(m => m.status === '活跃').length;
+  const avgPower = state.members.length ? Math.round(state.members.reduce((s,m) => s+m.power, 0) / state.members.length) : 0;
+  const totalContrib = state.members.reduce((s,m) => s+m.contribution, 0);
+  $('#headStats').innerHTML =
+    '<span class="head-stat">成员 <b>'+state.members.length+'</b></span>' +
+    '<span class="head-stat">活跃 <b>'+active+'</b></span>' +
+    '<span class="head-stat">平均势力 <b>'+avgPower+'</b></span>' +
+    '<span class="head-stat">总贡献 <b>'+totalContrib+'</b></span>' +
+    '<span class="head-stat">领地 <b>'+state.territory.length+'</b></span>';
+  const t = state.profile.name;
+  $('#appTitle').textContent = t ? '⚔ ' + t : '⚔ 同盟管理';
+}
+
+function renderMembers(){
+  const q = ($('#memberSearch').value || '').trim().toLowerCase();
+  const st = $('#memberStatusFilter').value;
+  let list = state.members.filter(m =>
+    (!q || m.name.toLowerCase().includes(q) || (m.note||'').toLowerCase().includes(q)) &&
+    (!st || m.status === st)
+  );
+  list = sortRows(list);
+  const tbody = $('#memberRows');
+  tbody.innerHTML = list.map(m => `
+    <tr>
+      <td><b>${esc(m.name)}</b></td>
+      <td><span class="badge b-role-${esc(m.role || '成员')}">${esc(m.role || '成员')}</span></td>
+      <td>${esc([m.group, m.clan].filter(Boolean).join(' · ')) || '-'}</td>
+      <td>${m.power || '-'}</td>
+      <td>${m.contribution || '-'}</td>
+      <td>${m.meritTotal || '-'}</td>
+      <td>${m.contributionWeek || '-'}</td>
+      <td>${m.meritWeek || '-'}</td>
+      <td>${esc(m.state) || '-'}</td>
+      <td><span class="badge ${STATUS_BADGE[m.status] || 'b-mute'}">${esc(m.status || '活跃')}</span></td>
+      <td class="note-cell" title="${esc(m.note)}">${esc(m.note)}</td>
+      <td>
+        <button class="op-btn" onclick="openMemberForm('${m.id}')">编辑</button>
+        <button class="op-btn del" onclick="deleteMember('${m.id}')">删除</button>
+      </td>
+    </tr>`).join('');
+  $('#memberEmpty').style.display = list.length ? 'none' : 'block';
+  document.querySelectorAll('#tab-members th[data-sort] .arrow').forEach(a => a.textContent = '');
+  const activeTh = document.querySelector('#tab-members th[data-sort="' + sort.key + '"] .arrow');
+  if(activeTh) activeTh.textContent = sort.dir > 0 ? '▲' : '▼';
+  renderHeadStats();
+}
+
+function renderTerritory(){
+  const q = ($('#terrSearch').value || '').trim().toLowerCase();
+  const tp = $('#terrTypeFilter').value;
+  const list = state.territory.filter(t =>
+    (!q || (t.coord||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (t.note||'').toLowerCase().includes(q)) &&
+    (!tp || t.type === tp)
+  );
+  $('#terrRows').innerHTML = list.map(t => `
+    <tr>
+      <td><b>${esc(t.coord) || '-'}</b>${t.coord ? `<button class="op-btn" onclick="copyCoord('${esc(t.coord)}', this)">复制</button>` : ''}</td>
+      <td><span class="badge b-kind-${esc(t.type)}">${esc(t.type || '土地')}</span></td>
+      <td>${t.tier || '-'}</td>
+      <td>${esc(t.owner) || '-'}</td>
+      <td>${fmtDate(t.date) || '-'}</td>
+      <td class="note-cell" title="${esc(t.note)}">${esc(t.note)}</td>
+      <td>
+        <button class="op-btn" onclick="openTerrForm('${t.id}')">编辑</button>
+        <button class="op-btn del" onclick="deleteTerr('${t.id}')">删除</button>
+      </td>
+    </tr>`).join('');
+  $('#terrEmpty').style.display = list.length ? 'none' : 'block';
+  renderHeadStats();
+}
+
+/* ---------- 概况 ---------- */
+function renderProfile(){
+  $('#pName').value = state.profile.name || '';
+  $('#pServer').value = state.profile.server || '';
+  $('#pSeason').value = state.profile.season || '';
+  $('#pLevel').value = state.profile.level || '';
+  $('#pNotice').value = state.notice || '';
+  const active = state.members.filter(m => m.status === '活跃').length;
+  const groups = new Set(state.members.map(m => (m.group || '').trim()).filter(Boolean)).size;
+  $('#profileStats').innerHTML =
+    '<div class="stat-box"><div class="num">'+state.members.length+'</div><div class="lbl">成员总数</div></div>' +
+    '<div class="stat-box"><div class="num">'+active+'</div><div class="lbl">活跃成员</div></div>' +
+    '<div class="stat-box"><div class="num">'+groups+'</div><div class="lbl">分组数</div></div>' +
+    '<div class="stat-box"><div class="num">'+state.territory.length+'</div><div class="lbl">领地记录</div></div>';
+  renderHeadStats();
+}
+function saveProfile(){
+  state.profile = {
+    name: $('#pName').value.trim(),
+    server: $('#pServer').value.trim(),
+    season: $('#pSeason').value.trim(),
+    level: $('#pLevel').value.trim()
+  };
+  save(); renderProfile();
+  alert('同盟信息已保存');
+}
+function saveNotice(){
+  state.notice = $('#pNotice').value;
+  save();
+  alert('公告已保存');
+}
+
+/* ---------- 坐标复制 ---------- */
+function copyCoord(coord, btn){
+  const done = () => { btn.textContent = '已复制'; setTimeout(() => btn.textContent = '复制', 1200); };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = coord;
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){}
+    ta.remove();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(coord).then(done).catch(fallback);
+  }else{
+    fallback();
+  }
+}
+
+/* ---------- 数据对比 ---------- */
+let cmpA = null, cmpB = null;
+const cmpFileNames = {A:'', B:''};
+
+function fmtNum(n){ return (n == null ? 0 : n).toLocaleString('zh-CN'); }
+
+function extractSnapshot(text){
+  const t = String(text || '').trim();
+  if(!t) return null;
+  // 应用备份 JSON
+  try{
+    const j = JSON.parse(t);
+    if(j && Array.isArray(j.members)){
+      const map = {};
+      j.members.forEach(m => {
+        if(!m || !m.name) return;
+        map[m.name] = {
+          contribution: num(m.contribution),
+          meritTotal: num(m.meritTotal),
+          power: num(m.power)
+        };
+      });
+      if(Object.keys(map).length) return map;
+    }
+  }catch(e){}
+  // 游戏统计 CSV
+  const rows = parseCSV(t);
+  const header = rows.find(r => r.some(c => c.includes('成员')));
+  if(!header) return null;
+  const ix = name => header.findIndex(h => h.includes(name));
+  const iName = ix('成员'), iContr = ix('贡献总量'), iMerit = ix('战功总量'), iPower = ix('势力值');
+  if(iName < 0) return null;
+  const map = {};
+  rows.forEach(r => {
+    const name = r[iName];
+    if(!name) return;
+    map[name] = {
+      contribution: iContr >= 0 ? num(r[iContr]) : 0,
+      meritTotal: iMerit >= 0 ? num(r[iMerit]) : 0,
+      power: iPower >= 0 ? num(r[iPower]) : 0
+    };
+  });
+  return Object.keys(map).length ? map : null;
+}
+
+function loadCompareFile(side, file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const snap = extractSnapshot(reader.result);
+    if(!snap){
+      alert('文件解析失败：请选择应用备份 JSON 或游戏「同盟统计」CSV');
+      return;
+    }
+    if(side === 'A'){ cmpA = snap; cmpFileNames.A = file.name; }
+    else{ cmpB = snap; cmpFileNames.B = file.name; }
+    updateCompareSources();
+    renderCompare();
+  };
+  reader.readAsText(file);
+}
+$('#cmpFileA').addEventListener('change', e => { if(e.target.files[0]) loadCompareFile('A', e.target.files[0]); e.target.value = ''; });
+$('#cmpFileB').addEventListener('change', e => { if(e.target.files[0]) loadCompareFile('B', e.target.files[0]); e.target.value = ''; });
+
+function useCurrentAs(side){
+  const map = {};
+  state.members.forEach(m => {
+    if(!m.name) return;
+    map[m.name] = { contribution: num(m.contribution), meritTotal: num(m.meritTotal), power: num(m.power) };
+  });
+  if(!Object.keys(map).length){ alert('当前应用还没有成员数据'); return; }
+  if(side === 'A'){ cmpA = map; cmpFileNames.A = '当前应用数据'; }
+  else{ cmpB = map; cmpFileNames.B = '当前应用数据'; }
+  updateCompareSources();
+  renderCompare();
+}
+function swapCompare(){
+  const t = cmpA; cmpA = cmpB; cmpB = t;
+  const tn = cmpFileNames.A; cmpFileNames.A = cmpFileNames.B; cmpFileNames.B = tn;
+  updateCompareSources();
+  renderCompare();
+}
+function updateCompareSources(){
+  const a = cmpA ? Object.keys(cmpA).length : 0;
+  const b = cmpB ? Object.keys(cmpB).length : 0;
+  $('#cmpInfoA').textContent = cmpA ? cmpFileNames.A + '（' + a + ' 人）' : '未选择';
+  $('#cmpInfoB').textContent = cmpB ? cmpFileNames.B + '（' + b + ' 人）' : '未选择';
+  $('#cmpSrcA').style.borderColor = cmpA ? 'rgba(201,162,75,.45)' : '';
+  $('#cmpSrcB').style.borderColor = cmpB ? 'rgba(201,162,75,.45)' : '';
+}
+
+function judgeRow(r, meritTh, contrTh){
+  if(r.onlyA) return {text:'已退出', cls:'b-out'};
+  if(r.onlyB) return {text:'新加入', cls:'b-active'};
+  if(r.meritDelta >= meritTh) return {text:'参战', cls:'b-role-指挥官'};
+  if(r.meritDelta > 0) return {text:'有行动', cls:'b-kind-集结'};
+  if(r.contributionDelta >= contrTh) return {text:'贡献为主', cls:'b-kind-活动'};
+  if(r.contributionDelta > 0) return {text:'轻微参与', cls:'b-mute'};
+  return {text:'未参战', cls:'b-out'};
+}
+function memberGroup(name){
+  const m = state.members.find(x => x.name === name);
+  return (m && m.group && m.group.trim()) ? m.group.trim() : '未分组';
+}
+function buildCompareRows(){
+  if(!cmpA || !cmpB) return null;
+  const meritTh = num($('#cmpMeritTh').value), contrTh = num($('#cmpContrTh').value);
+  const names = new Set([...Object.keys(cmpA), ...Object.keys(cmpB)]);
+  const rows = [];
+  names.forEach(n => {
+    const ma = cmpA[n], mb = cmpB[n];
+    const g = memberGroup(n);
+    if(!ma){ rows.push({name:n, onlyB:true, group:g}); return; }
+    if(!mb){ rows.push({name:n, onlyA:true, group:g}); return; }
+    rows.push({
+      name:n, group:g,
+      contrA: ma.contribution, contrB: mb.contribution, contributionDelta: mb.contribution - ma.contribution,
+      meritA: ma.meritTotal, meritB: mb.meritTotal, meritDelta: mb.meritTotal - ma.meritTotal,
+      powerA: ma.power, powerB: mb.power, powerDelta: mb.power - ma.power
+    });
+  });
+  rows.forEach(r => Object.assign(r, judgeRow(r, meritTh, contrTh)));
+  return rows;
+}
+function deltaCell(d){
+  if(d > 0) return {txt:'+'+fmtNum(d), cls:'delta-pos'};
+  if(d < 0) return {txt:fmtNum(d), cls:'delta-neg'};
+  return {txt:'0', cls:'delta-zero'};
+}
+function getFilteredCompareRows(rows){
+  const filter = $('#cmpFilter').value;
+  const group = $('#cmpGroup').value;
+  const sort = $('#cmpSort').value;
+  const contrTh = num($('#cmpContrTh').value);
+  let list = rows;
+  if(filter === 'active'){
+    list = list.filter(r => r.onlyA || r.onlyB || r.meritDelta > 0 || r.contributionDelta >= contrTh);
+  }else if(filter === 'idle'){
+    list = list.filter(r => !r.onlyA && !r.onlyB && r.meritDelta <= 0 && r.contributionDelta < contrTh);
+  }else if(filter === 'moved'){
+    list = list.filter(r => Math.abs(r.contributionDelta || 0) > 0 || Math.abs(r.meritDelta || 0) > 0 || Math.abs(r.powerDelta || 0) > 0);
+  }else if(filter === 'joinleave'){
+    list = list.filter(r => r.onlyA || r.onlyB);
+  }
+  if(group) list = list.filter(r => r.group === group);
+  const keyMap = {merit:'meritDelta', contribution:'contributionDelta', power:'powerDelta', name:'name'};
+  const key = keyMap[sort] || 'meritDelta';
+  return [...list].sort((x,y) => {
+    if(key === 'name') return x.name.localeCompare(y.name, 'zh');
+    return (y[key] || 0) - (x[key] || 0);
+  });
+}
+function renderGroupStats(rows){
+  const groups = {};
+  rows.forEach(r => {
+    if(r.onlyA || r.onlyB) return;
+    const g = r.group;
+    if(!groups[g]) groups[g] = {total:0, ok:0};
+    groups[g].total++;
+    if((r.meritDelta || 0) > 0) groups[g].ok++;
+  });
+  const names = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'zh'));
+  $('#cmpGroupRows').innerHTML = names.map(g => {
+    const s = groups[g];
+    const pct = s.total ? Math.round(s.ok / s.total * 100) : 0;
+    return '<tr><td><b>'+esc(g)+'</b></td><td>'+s.total+'</td><td class="'+(s.ok > 0 ? 'delta-pos' : '')+'">'+s.ok+'</td>' +
+      '<td style="white-space:nowrap;"><span class="bar" style="display:inline-block;width:90px;vertical-align:middle;"><span class="bar-fill" style="display:block;width:'+pct+'%;"></span></span> <b>'+pct+'%</b></td></tr>';
+  }).join('');
+  $('#cmpGroupEmpty').style.display = names.length ? 'none' : 'block';
+}
+function renderCompare(){
+  const rows = buildCompareRows();
+  const stats = $('#cmpStats');
+  const tbody = $('#cmpRows');
+  $('#cmpEmpty').style.display = rows ? 'none' : 'block';
+  if(!rows){
+    tbody.innerHTML = '';
+    stats.innerHTML = '';
+    $('#cmpGroupRows').innerHTML = '';
+    $('#cmpGroupEmpty').style.display = 'block';
+    return;
+  }
+  // 刷新分组筛选选项
+  const sel = $('#cmpGroup');
+  const prevGroup = sel.value;
+  const groupSet = [...new Set(rows.map(r => r.group))].sort((a,b) => a.localeCompare(b, 'zh'));
+  sel.innerHTML = '<option value="">全部分组</option>' + groupSet.map(g => '<option>'+esc(g)+'</option>').join('');
+  if(prevGroup && groupSet.includes(prevGroup)) sel.value = prevGroup;
+  const list = getFilteredCompareRows(rows);
+  const contrTh = num($('#cmpContrTh').value);
+  const active = rows.filter(r => (r.meritDelta || 0) > 0).length;
+  const idle = rows.filter(r => !r.onlyA && !r.onlyB && (r.meritDelta || 0) <= 0 && (r.contributionDelta || 0) < contrTh).length;
+  const joined = rows.filter(r => r.onlyB).length;
+  const left = rows.filter(r => r.onlyA).length;
+  stats.innerHTML =
+    '<div class="stat-box"><div class="num">'+rows.length+'</div><div class="lbl">对比成员数</div></div>' +
+    '<div class="stat-box"><div class="num">'+active+'</div><div class="lbl">有战功（参战）</div></div>' +
+    '<div class="stat-box"><div class="num">'+idle+'</div><div class="lbl">未参战</div></div>' +
+    '<div class="stat-box"><div class="num">'+joined+'</div><div class="lbl">新加入</div></div>' +
+    '<div class="stat-box"><div class="num">'+left+'</div><div class="lbl">已退出</div></div>';
+  tbody.innerHTML = list.map(r => {
+    if(r.onlyA){
+      return '<tr><td><b>'+esc(r.name)+'</b></td><td>'+esc(r.group)+'</td><td colspan="9" style="color:var(--red);">仅存在于时间点①（已退出或未出现在②）</td><td><span class="badge b-out">已退出</span></td></tr>';
+    }
+    if(r.onlyB){
+      return '<tr><td><b>'+esc(r.name)+'</b></td><td>'+esc(r.group)+'</td><td colspan="9" style="color:var(--green);">仅存在于时间点②（新加入）</td><td><span class="badge b-active">新加入</span></td></tr>';
+    }
+    const dc = deltaCell(r.contributionDelta), dm = deltaCell(r.meritDelta), dp = deltaCell(r.powerDelta);
+    return '<tr>' +
+      '<td><b>'+esc(r.name)+'</b></td><td>'+esc(r.group)+'</td>' +
+      '<td>'+fmtNum(r.contrA)+'</td><td>'+fmtNum(r.contrB)+'</td><td class="'+dc.cls+'">'+dc.txt+'</td>' +
+      '<td>'+fmtNum(r.meritA)+'</td><td>'+fmtNum(r.meritB)+'</td><td class="'+dm.cls+'">'+dm.txt+'</td>' +
+      '<td>'+fmtNum(r.powerA)+'</td><td>'+fmtNum(r.powerB)+'</td><td class="'+dp.cls+'">'+dp.txt+'</td>' +
+      '<td><span class="badge '+r.cls+'">'+esc(r.text)+'</span></td>' +
+      '</tr>';
+  }).join('');
+  renderGroupStats(rows);
+}
+function exportCompareCSV(){
+  const rows = buildCompareRows();
+  if(!rows){ alert('请先选择两个时间点的文件'); return; }
+  const list = getFilteredCompareRows(rows);
+  const lines = ['成员,分组,贡献_时间点1,贡献_时间点2,贡献变化,战功_时间点1,战功_时间点2,战功变化,势力_时间点1,势力_时间点2,势力变化,判定'];
+  list.forEach(r => {
+    if(r.onlyA){ lines.push([r.name, r.group, '', '', '', '', '', '', '', '', '', '已退出'].join(',')); return; }
+    if(r.onlyB){ lines.push([r.name, r.group, '', '', '', '', '', '', '', '', '', '新加入'].join(',')); return; }
+    lines.push([r.name, r.group, r.contrA, r.contrB, r.contributionDelta, r.meritA, r.meritB, r.meritDelta, r.powerA, r.powerB, r.powerDelta, r.text].join(','));
+  });
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '同盟数据对比_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+$('#cmpFilter').addEventListener('change', renderCompare);
+$('#cmpGroup').addEventListener('change', renderCompare);
+$('#cmpSort').addEventListener('change', renderCompare);
+$('#cmpMeritTh').addEventListener('change', renderCompare);
+$('#cmpContrTh').addEventListener('change', renderCompare);
+
+/* ---------- 数据管理 ---------- */
+function exportData(){
+  const payload = {
+    app: '同盟管理',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profile: state.profile,
+    notice: state.notice,
+    members: state.members,
+    territory: state.territory
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '同盟管理备份_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+$('#importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const s = JSON.parse(reader.result);
+      if(!Array.isArray(s.members) && !Array.isArray(s.territory)){
+        throw new Error('格式不正确');
+      }
+      if(!confirm('导入将覆盖当前全部数据，确定继续吗？')){
+        e.target.value = '';
+        return;
+      }
+      state.profile = Object.assign({name:'',server:'',season:'',level:''}, s.profile || {});
+      state.notice = s.notice || '';
+      state.members = Array.isArray(s.members) ? s.members : [];
+      state.territory = Array.isArray(s.territory) ? s.territory : [];
+      save(); renderAll();
+      alert('导入成功！');
+    }catch(err){
+      alert('导入失败：文件格式不正确');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- 导入同盟统计 CSV ---------- */
+function parseCSV(text){
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(inQ){
+      if(c === '"'){
+        if(text[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = false;
+      }else{
+        cur += c;
+      }
+    }else{
+      if(c === '"'){
+        inQ = true;
+      }else if(c === ','){
+        row.push(cur); cur = '';
+      }else if(c === '\n'){
+        row.push(cur);
+        if(row.some(x => x.trim() !== '')) rows.push(row);
+        row = []; cur = '';
+      }else if(c !== '\r'){
+        cur += c;
+      }
+    }
+  }
+  row.push(cur);
+  if(row.some(x => x.trim() !== '')) rows.push(row);
+  return rows.map(r => r.map(x => x.trim()));
+}
+function importCSV(text){
+  const rows = parseCSV(text);
+  if(!rows.length){ alert('没有解析到任何数据'); return; }
+  const header = rows.find(r => r.some(c => c.includes('成员')));
+  if(!header){
+    alert('找不到表头（第一行应包含「成员」列）');
+    return;
+  }
+  const idx = name => {
+    const i = header.findIndex(h => h.includes(name));
+    return i >= 0 ? i : -1;
+  };
+  const map = {
+    name: idx('成员'),
+    power: idx('势力值'),
+    contribution: idx('贡献总量'),
+    contributionWeek: idx('贡献本周'),
+    meritTotal: idx('战功总量'),
+    meritWeek: idx('战功本周'),
+    assistTotal: idx('助攻总量'),
+    assistWeek: idx('助攻本周'),
+    donateTotal: idx('捐献总量'),
+    donateWeek: idx('捐献本周'),
+    state: idx('所属州'),
+    clan: idx('门阀')
+  };
+  if(map.name < 0){ alert('表头中没有「成员」列'); return; }
+  let added = 0, updated = 0;
+  rows.forEach(r => {
+    const name = r[map.name];
+    if(!name) return;
+    let m = state.members.find(x => x.name === name);
+    if(!m){
+      m = { id: uid(), name, role: '成员', status: '活跃' };
+      state.members.push(m);
+      added++;
+    }else{
+      updated++;
+    }
+    Object.keys(map).forEach(k => {
+      const i = map[k];
+      if(i < 0) return;
+      const v = r[i] == null ? '' : r[i].trim();
+      if(k === 'name') return;
+      if(k === 'state' || k === 'clan'){
+        m[k] = v;
+      }else{
+        const n = Number(String(v).replace(/[,\s]/g, ''));
+        m[k] = isNaN(n) ? 0 : n;
+      }
+    });
+  });
+  save();
+  renderAll();
+  return {added, updated};
+}
+function importCSVFromText(){
+  const text = $('#csvText').value;
+  if(!text.trim()){ alert('请先选择 CSV 文件或粘贴数据'); return; }
+  if(!confirm('导入将按成员名新增或更新数据，保留已填写的职务、分组、状态。确定继续吗？')) return;
+  const r = importCSV(text);
+  if(r) alert('导入完成：新增 ' + r.added + ' 人，更新 ' + r.updated + ' 人');
+}
+$('#csvFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    $('#csvText').value = reader.result;
+    if(confirm('导入将按成员名新增或更新数据，保留已填写的职务、分组、状态。确定继续吗？')){
+      const r = importCSV(reader.result);
+      if(r) alert('导入完成：新增 ' + r.added + ' 人，更新 ' + r.updated + ' 人');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function loadSample(){
+  if(confirm('将添加一组示例数据（可随后删除），继续吗？')){
+    state.profile = {name:'龙腾天下', server:'S1', season:'S4', level:50};
+    state.notice = '今晚 20:00 攻占襄阳，19:30 集合，主力带攻城器械。';
+    state.members = [
+      {id:uid(), name:'江东小霸王', role:'盟主', group:'主力', power:32000, contribution:58000, contributionWeek:8200000, meritTotal:3600000, meritWeek:120000, assistTotal:52000, assistWeek:3000, donateTotal:30000000, donateWeek:0, state:'司隶', clan:'将军府', attacks:12, status:'活跃', note:'都督队'},
+      {id:uid(), name:'卧龙先生', role:'指挥官', group:'主力', power:28600, contribution:42000, contributionWeek:6100000, meritTotal:2800000, meritWeek:98000, assistTotal:47000, assistWeek:1500, donateTotal:15000000, donateWeek:0, state:'司隶', clan:'将军府', attacks:9, status:'活跃', note:'主攻城部队'},
+      {id:uid(), name:'锦帆贼', role:'精英', group:'开荒', power:24100, contribution:30000, contributionWeek:3300000, meritTotal:1900000, meritWeek:65000, assistTotal:31000, assistWeek:900, donateTotal:8000000, donateWeek:0, state:'司隶', clan:'无门阀', attacks:7, status:'潜水', note:'开荒队'},
+      {id:uid(), name:'北地枪王', role:'成员', group:'后勤', power:19800, contribution:15600, contributionWeek:1200000, meritTotal:900000, meritWeek:32000, assistTotal:15000, assistWeek:400, donateTotal:4000000, donateWeek:0, state:'荆州', clan:'无门阀', attacks:3, status:'请假', note:''}
+    ];
+    state.territory = [
+      {id:uid(), coord:'315,482', type:'铜矿', tier:10, owner:'', date:'', note:'产量 3000 / 守军 9 队'},
+      {id:uid(), coord:'302,491', type:'铜矿', tier:10, owner:'', date:'', note:''},
+      {id:uid(), coord:'318,475', type:'资源地', tier:8, owner:'锦帆贼', date:'2026-07-30', note:'西线入口'}
+    ];
+    save(); renderAll();
+    alert('已载入示例数据');
+  }
+}
+function clearData(){
+  if(confirm('确定清空全部数据吗？此操作不可恢复，建议先导出备份。')){
+    state = {
+      profile: {name:'',server:'',season:'',level:''},
+      notice: '',
+      members: [], territory: []
+    };
+    save(); renderAll();
+  }
+}
+
+/* ---------- Tab / 事件绑定 ---------- */
+function switchTab(name){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
+  renderAll();
+}
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+$('#memberSearch').addEventListener('input', renderMembers);
+$('#memberStatusFilter').addEventListener('change', renderMembers);
+$('#terrSearch').addEventListener('input', renderTerritory);
+$('#terrTypeFilter').addEventListener('change', renderTerritory);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+function renderAll(){
+  renderProfile();
+  renderMembers();
+  renderTerritory();
+}
+
+load();
+renderAll();
+</script>
+</body>
+</html>
