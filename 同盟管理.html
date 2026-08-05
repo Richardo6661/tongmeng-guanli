@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#12151e">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔</text></svg>">
 <title>同盟管理 · 三国志战略版</title>
+<script src="xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#0f1219;
@@ -432,7 +433,7 @@
     <div class="card">
       <h2>领地一览</h2>
       <div class="toolbar">
-        <input type="text" id="terrSearch" placeholder="搜索坐标 / 成员 / 备注…">
+        <input type="text" id="terrSearch" placeholder="搜索坐标 / 成员 / 小组 / 备注…">
         <select id="terrTypeFilter">
           <option value="">全部类型</option>
           <option>铜矿</option>
@@ -447,6 +448,7 @@
             <th>类型</th>
             <th>等级</th>
             <th>归属成员</th>
+            <th>小组</th>
             <th>占领日期</th>
             <th>备注</th>
             <th>操作</th>
@@ -461,15 +463,15 @@
       <div class="data-actions">
         <label class="btn" style="cursor:pointer;">
           📄 选择文件
-          <input type="file" id="terrFile" accept=".csv,.txt,text/csv,text/plain" style="display:none;">
+          <input type="file" id="terrFile" accept=".xlsx,.xls,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" style="display:none;">
         </label>
       </div>
-      <textarea class="notice-box" id="terrText" placeholder="粘贴铜矿坐标表：含「坐标」表头的表格，或每行一个坐标（如 123,456）…"></textarea>
+      <textarea class="notice-box" id="terrText" placeholder="也可以粘贴 CSV / 文本：含「坐标」或 x、y 表头的表格，或每行一个坐标（如 123,456）…"></textarea>
       <div class="form-row">
         <button class="btn btn-gold" onclick="importTerritoryFromText()">导入铜矿</button>
       </div>
       <div class="hint">
-        导入后类型自动为「铜矿」，重复坐标自动跳过；表格里如有「等级」「产量 / 守军」等列会自动填入对应字段。
+        直接选择「九州兵兴铜矿海王表」这类 xlsx 文件即可：自动识别多个工作表，填入坐标（x,y）、等级、所属州郡、分配小组、分配成员；CSV / 文本同样支持。重复坐标自动跳过。
       </div>
     </div>
   </section>
@@ -886,6 +888,7 @@ function openTerrForm(id){
     {key:'type', label:'类型', type:'select', options:TERR_TYPES},
     {key:'tier', label:'等级', type:'number', placeholder:'1-10'},
     {key:'owner', label:'归属成员', placeholder:'输入成员昵称'},
+    {key:'group', label:'分配小组', placeholder:'主力 / 开荒…'},
     {key:'date', label:'占领日期', type:'date'},
     {key:'note', label:'备注', placeholder:'资源州 / 分城…'}
   ], t, data => {
@@ -896,9 +899,10 @@ function openTerrForm(id){
       state.territory.push({
         id: uid(),
         coord: data.coord,
-        type: data.type || '土地',
+        type: data.type || '铜矿',
         tier: num(data.tier),
         owner: data.owner,
+        group: data.group,
         date: data.date,
         note: data.note
       });
@@ -922,69 +926,121 @@ function extractCoord(s){
   const nums = t.match(/\d+/g);
   return (nums && nums.length >= 2) ? nums[0] + ',' + nums[1] : null;
 }
+function parseTerritoryRows(header, rows){
+  const H = header.map(h => String(h == null ? '' : h).trim());
+  const find = re => H.findIndex(h => re.test(h));
+  const iTier = find(/等级|级别/);
+  const iType = find(/类别|类型/);
+  const iState = find(/^州$/);
+  const iCounty = find(/^郡$/);
+  const iPos = find(/位置|区域/);
+  const iCoord = find(/坐标|座标/);
+  const iX = H.findIndex(h => /^x$/i.test(h));
+  const iY = H.findIndex(h => /^y$/i.test(h));
+  const iGroup = find(/小组|分组/);
+  const iOwner = find(/成员|归属/);
+  const iNote = find(/产量|守军|兵力|备注|战法|强度/);
+  const out = [];
+  rows.forEach(r => {
+    if(!r || !r.some(c => c != null && String(c).trim() !== '')) return;
+    let coord = null;
+    if(iX >= 0 && iY >= 0 && r[iX] != null && r[iY] != null){
+      const c = String(r[iX]).trim() + ',' + String(r[iY]).trim();
+      if(/^\d+,\d+$/.test(c)) coord = c;
+    }
+    if(!coord && iCoord >= 0) coord = extractCoord(r[iCoord]);
+    if(!coord) coord = extractCoord(r.join(','));
+    if(!coord) return;
+    let note = '';
+    if(iPos >= 0 && r[iPos]) note = String(r[iPos]).trim();
+    else if(iState >= 0 && iCounty >= 0 && r[iState] && r[iCounty]) note = String(r[iState]).trim() + '-' + String(r[iCounty]).trim();
+    if(iNote >= 0 && r[iNote]) note = (note ? note + ' · ' : '') + String(r[iNote]).trim();
+    out.push({
+      coord: coord,
+      tier: iTier >= 0 ? num(r[iTier]) : 0,
+      type: (iType >= 0 && r[iType] && String(r[iType]).trim()) ? String(r[iType]).trim() : '铜矿',
+      group: (iGroup >= 0 && r[iGroup]) ? String(r[iGroup]).trim() : '',
+      owner: (iOwner >= 0 && r[iOwner]) ? String(r[iOwner]).trim() : '',
+      note: note
+    });
+  });
+  return out;
+}
 function parseTerritoryText(text){
   const parsed = parseCSV(text);
-  const headerIdx = parsed.findIndex(r => r.some(c => /坐标|座标|铜矿/.test(c)));
+  const headerIdx = parsed.findIndex(r => r.some(c => /等级|坐标|座标|类别|铜矿/.test(c)));
+  if(headerIdx >= 0) return parseTerritoryRows(parsed[headerIdx], parsed.slice(headerIdx + 1));
   const out = [];
-  if(headerIdx >= 0){
-    const header = parsed[headerIdx].map(h => h.trim());
-    const iCoord = header.findIndex(h => /坐标|座标|铜矿/.test(h));
-    const iTier = header.findIndex(h => /等级|级别/.test(h));
-    const iNote = header.findIndex(h => /产量|守军|兵力|备注|战法|强度/.test(h));
-    for(let i = headerIdx + 1; i < parsed.length; i++){
-      const r = parsed[i];
-      let coord = iCoord >= 0 ? extractCoord(r[iCoord]) : null;
-      if(!coord) coord = extractCoord(r.join(','));
-      if(!coord) continue;
-      out.push({coord: coord, tier: iTier >= 0 ? num(r[iTier]) : 0, note: (iNote >= 0 && r[iNote]) ? r[iNote] : ''});
-    }
-  }else{
-    parsed.forEach(r => {
-      const coord = r.length === 1 ? extractCoord(r[0]) : extractCoord(r.join(','));
-      if(coord) out.push({coord: coord, tier: 0, note: ''});
-    });
-  }
+  parsed.forEach(r => {
+    const coord = r.length === 1 ? extractCoord(r[0]) : extractCoord(r.join(','));
+    if(coord) out.push({coord: coord, tier: 0, type: '铜矿', group: '', owner: '', note: ''});
+  });
   return out;
+}
+function parseXlsxTerritories(buffer){
+  const wb = XLSX.read(buffer, {type:'array'});
+  const all = [];
+  wb.SheetNames.forEach(sn => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:''});
+    const headerIdx = rows.findIndex(r => r.some(c => /等级|坐标|座标|类别/.test(String(c).trim())));
+    if(headerIdx < 0) return;
+    all.push(...parseTerritoryRows(rows[headerIdx], rows.slice(headerIdx + 1)));
+  });
+  return all;
 }
 function importTerritory(items){
   let added = 0, skipped = 0;
   const seen = new Set();
   items.forEach(it => {
-    if(seen.has(it.coord)){ skipped++; return; }
-    seen.add(it.coord);
-    if(state.territory.some(t => t.coord === it.coord && t.type === '铜矿')){ skipped++; return; }
-    state.territory.push({id: uid(), type: '铜矿', coord: it.coord, tier: it.tier, owner: '', date: '', note: it.note});
+    const key = it.coord + '|' + it.type;
+    if(seen.has(key)){ skipped++; return; }
+    seen.add(key);
+    if(state.territory.some(t => t.coord === it.coord && t.type === it.type)){ skipped++; return; }
+    state.territory.push({id: uid(), type: it.type, coord: it.coord, tier: it.tier, owner: it.owner || '', group: it.group || '', date: '', note: it.note || ''});
     added++;
   });
   save(); renderTerritory();
   return {added: added, skipped: skipped};
 }
+function reportImport(r){
+  alert('导入完成：新增 ' + r.added + ' 个，跳过重复 ' + r.skipped + ' 个');
+}
 function importTerritoryFromText(){
   const text = $('#terrText').value;
-  if(!text.trim()){ alert('请先选择文件或粘贴铜矿坐标'); return; }
-  if(!confirm('将按坐标导入为「铜矿」类型，重复坐标自动跳过。继续吗？')) return;
+  if(!text.trim()){ alert('请先选择文件或粘贴坐标'); return; }
+  if(!confirm('将按坐标导入领地，重复坐标自动跳过。继续吗？')) return;
   const items = parseTerritoryText(text);
-  if(!items.length){ alert('没有解析到坐标，请检查格式（每行一个坐标，如 123,456）'); return; }
-  const r = importTerritory(items);
-  alert('导入完成：新增 ' + r.added + ' 个铜矿，跳过重复 ' + r.skipped + ' 个');
+  if(!items.length){ alert('没有解析到坐标，请检查格式'); return; }
+  reportImport(importTerritory(items));
 }
-$('#terrFile').addEventListener('change', e => {
+$('#terrFile').addEventListener('change', async e => {
   const file = e.target.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    $('#terrText').value = reader.result;
-    if(confirm('将按坐标导入为「铜矿」类型，重复坐标自动跳过。继续吗？')){
-      const items = parseTerritoryText(reader.result);
-      if(!items.length){
-        alert('没有解析到坐标，请检查文件格式');
-      }else{
-        const r = importTerritory(items);
-        alert('导入完成：新增 ' + r.added + ' 个铜矿，跳过重复 ' + r.skipped + ' 个');
+  let items = null;
+  try{
+    if(/\.xlsx?$/i.test(file.name)){
+      if(typeof XLSX === 'undefined'){
+        alert('缺少解析库文件 xlsx.full.min.js，请确认它与网页在同一个文件夹');
+        e.target.value = '';
+        return;
       }
+      const buf = await file.arrayBuffer();
+      items = parseXlsxTerritories(buf);
+    }else{
+      const text = await file.text();
+      $('#terrText').value = text;
+      items = parseTerritoryText(text);
     }
-  };
-  reader.readAsText(file);
+  }catch(err){
+    alert('文件读取失败：' + err.message);
+    e.target.value = '';
+    return;
+  }
+  if(!items || !items.length){
+    alert('没有解析到坐标，请检查文件格式');
+  }else if(confirm('将按坐标导入领地，重复坐标自动跳过。继续吗？')){
+    reportImport(importTerritory(items));
+  }
   e.target.value = '';
 });
 
@@ -1059,7 +1115,7 @@ function renderTerritory(){
   const q = ($('#terrSearch').value || '').trim().toLowerCase();
   const tp = $('#terrTypeFilter').value;
   const list = state.territory.filter(t =>
-    (!q || (t.coord||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (t.note||'').toLowerCase().includes(q)) &&
+    (!q || (t.coord||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q) || (t.group||'').toLowerCase().includes(q) || (t.note||'').toLowerCase().includes(q)) &&
     (!tp || t.type === tp)
   );
   $('#terrRows').innerHTML = list.map(t => `
@@ -1068,6 +1124,7 @@ function renderTerritory(){
       <td><span class="badge b-kind-${esc(t.type)}">${esc(t.type || '土地')}</span></td>
       <td>${t.tier || '-'}</td>
       <td>${esc(t.owner) || '-'}</td>
+      <td>${esc(t.group) || '-'}</td>
       <td>${fmtDate(t.date) || '-'}</td>
       <td class="note-cell" title="${esc(t.note)}">${esc(t.note)}</td>
       <td>
@@ -1535,9 +1592,9 @@ function loadSample(){
       {id:uid(), name:'北地枪王', role:'成员', group:'后勤', power:19800, contribution:15600, contributionWeek:1200000, meritTotal:900000, meritWeek:32000, assistTotal:15000, assistWeek:400, donateTotal:4000000, donateWeek:0, state:'荆州', clan:'无门阀', attacks:3, status:'请假', note:''}
     ];
     state.territory = [
-      {id:uid(), coord:'315,482', type:'铜矿', tier:10, owner:'', date:'', note:'产量 3000 / 守军 9 队'},
-      {id:uid(), coord:'302,491', type:'铜矿', tier:10, owner:'', date:'', note:''},
-      {id:uid(), coord:'318,475', type:'资源地', tier:8, owner:'锦帆贼', date:'2026-07-30', note:'西线入口'}
+      {id:uid(), coord:'573,1211', type:'铜矿', tier:10, owner:'', group:'主力', date:'', note:'关中-汉中郡'},
+      {id:uid(), coord:'590,1031', type:'铜矿', tier:10, owner:'', group:'开荒', date:'', note:'关中-汉中郡'},
+      {id:uid(), coord:'318,475', type:'资源地', tier:8, owner:'锦帆贼', group:'', date:'2026-07-30', note:'西线入口'}
     ];
     save(); renderAll();
     alert('已载入示例数据');
