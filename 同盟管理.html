@@ -241,6 +241,16 @@
     padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;
   }
   .chip-auth:hover{border-color:var(--gold);color:var(--gold-bright);}
+  .ss-wrap{position:relative;}
+  .ss-list{
+    position:absolute;top:100%;left:0;right:0;z-index:20;
+    background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+    max-height:180px;overflow-y:auto;margin-top:2px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  .ss-item{padding:8px 10px;cursor:pointer;font-size:14px;}
+  .ss-item:hover,.ss-item.hl{background:rgba(201,162,75,.14);color:var(--gold-bright);}
+  .ss-none{padding:8px 10px;color:var(--muted);font-size:13px;}
   .stat-grid{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
   }
@@ -794,6 +804,8 @@ function openModal(title, fields, values, cb){
         if(o && typeof o === 'object') return '<option value="'+esc(o.value)+'">'+esc(o.label)+'</option>';
         return '<option>'+esc(o)+'</option>';
       }).join('') + '</select>';
+    }else if(f.type === 'searchSelect'){
+      input = '<div class="ss-wrap"><input type="text" id="'+id+'" placeholder="'+(f.placeholder||'')+'" autocomplete="off"><div class="ss-list" id="'+id+'_list" style="display:none;"></div></div>';
     }else if(f.type === 'textarea'){
       input = '<textarea id="'+id+'" rows="2" placeholder="'+(f.placeholder||'')+'"></textarea>';
     }else{
@@ -804,9 +816,44 @@ function openModal(title, fields, values, cb){
   fields.forEach(f => {
     const el = $('#mf_' + f.key);
     if(el && values && values[f.key] != null) el.value = values[f.key];
+    if(f.type === 'searchSelect') attachSearchSelect($('#mf_' + f.key), $('#mf_' + f.key + '_list'), f.options || []);
   });
   modalCb = cb;
   $('#modal').classList.add('show');
+}
+function attachSearchSelect(input, list, options){
+  if(!input) return;
+  const items = options.map(o => ({value: o && typeof o === 'object' ? o.value : o, label: o && typeof o === 'object' ? o.label : o}));
+  let hl = -1;
+  function render(){
+    const q = input.value.trim().toLowerCase();
+    const hits = items.filter(o => !q || String(o.label).toLowerCase().includes(q)).slice(0, 12);
+    if(!hits.length){
+      list.innerHTML = '<div class="ss-none">没有匹配的成员</div>';
+    }else{
+      list.innerHTML = hits.map((o, i) => '<div class="ss-item' + (i === hl ? ' hl' : '') + '" data-v="' + esc(o.value) + '">' + esc(o.label) + '</div>').join('');
+    }
+    list.style.display = 'block';
+    hl = -1;
+  }
+  function hide(){ list.style.display = 'none'; }
+  function pick(o){
+    input.value = o.label;
+    hide();
+  }
+  input.addEventListener('input', () => { hl = -1; render(); });
+  input.addEventListener('focus', () => render());
+  input.addEventListener('keydown', e => {
+    const nodes = [...list.querySelectorAll('.ss-item')];
+    if(e.key === 'ArrowDown' && nodes.length){ e.preventDefault(); hl = (hl + 1) % nodes.length; nodes.forEach((n,i) => n.classList.toggle('hl', i === hl)); }
+    else if(e.key === 'ArrowUp' && nodes.length){ e.preventDefault(); hl = (hl - 1 + nodes.length) % nodes.length; nodes.forEach((n,i) => n.classList.toggle('hl', i === hl)); }
+    else if(e.key === 'Enter' && hl >= 0 && nodes[hl]){ e.preventDefault(); const o = items.find(x => String(x.value) === nodes[hl].dataset.v); if(o) pick(o); }
+  });
+  list.addEventListener('mousedown', e => {
+    const it = e.target.closest('.ss-item');
+    if(it){ const o = items.find(x => String(x.value) === it.dataset.v); if(o) pick(o); }
+  });
+  document.addEventListener('click', e => { if(!e.target.closest('.ss-wrap')) hide(); });
 }
 function closeModal(){
   $('#modal').classList.remove('show');
@@ -893,7 +940,7 @@ function openTerrForm(id){
     {key:'coord', label:'坐标', placeholder:'例如：123,456'},
     {key:'type', label:'类型', type:'select', options:TERR_TYPES},
     {key:'tier', label:'等级', type:'number', placeholder:'1-10'},
-    {key:'owner', label:'归属成员', type:'select', options: ownerOptions},
+    {key:'owner', label:'归属成员', type:'searchSelect', options: ownerOptions, placeholder:'输入几个字筛选成员…'},
     {key:'group', label:'分配小组', placeholder:'主力 / 开荒…'},
     {key:'note', label:'备注', placeholder:'资源州 / 分城…'}
   ], t, data => {
