@@ -211,6 +211,35 @@
   .cmp-src .info b{color:var(--gold-bright);}
   .bar{height:12px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
   .bar-fill{height:100%;background:linear-gradient(90deg,#8a6d2c,#e8c97a);border-radius:6px;}
+  .header-tools{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;}
+  .login-overlay{
+    position:fixed;inset:0;z-index:100;
+    background:radial-gradient(circle at 50% 30%,#1c2231,#0e1118 70%);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+  }
+  .login-overlay.hidden{display:none;}
+  .login-card{
+    width:100%;max-width:380px;text-align:center;
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:14px;padding:30px 26px;
+    box-shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  .login-logo{font-size:42px;margin-bottom:6px;}
+  .login-card h1{font-size:24px;letter-spacing:3px;color:var(--gold-bright);}
+  .login-sub{color:var(--muted);font-size:13px;margin:6px 0 18px;}
+  .login-card input{
+    width:100%;margin-bottom:10px;text-align:center;
+  }
+  .login-btn{width:100%;min-height:44px;margin-top:4px;}
+  .login-hint{color:var(--muted);font-size:12px;margin-top:12px;line-height:1.6;}
+  .login-none{color:var(--muted);font-size:13px;display:block;padding:4px 0 10px;}
+  .login-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px;}
+  .chip-auth{
+    background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;
+  }
+  .chip-auth:hover{border-color:var(--gold);color:var(--gold-bright);}
   .stat-grid{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
   }
@@ -305,8 +334,12 @@
 <body>
 <header>
   <h1 id="appTitle">⚔ 同盟管理</h1>
-  <p>三国志战略版 · 成员 / 领地 / 事件一站式管理（数据保存在本浏览器，可随时导出备份）</p>
+  <p>三国志战略版 · 成员 / 领地 / 数据对比一站式管理（数据保存在本浏览器，可随时导出备份）</p>
   <div class="head-stats" id="headStats"></div>
+  <div class="header-tools">
+    <span class="head-stat" id="allianceBadge"></span>
+    <button class="btn btn-sm" onclick="logout()">⇄ 切换同盟</button>
+  </div>
 </header>
 
 <nav id="tabs">
@@ -591,6 +624,20 @@
   </section>
 </main>
 
+<!-- 登录窗口 -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">⚔</div>
+    <h1>同盟管理</h1>
+    <p class="login-sub">三国志战略版 · 同盟数据助手</p>
+    <div class="login-chips" id="loginChips"></div>
+    <input type="text" id="loginName" placeholder="输入同盟名称，如：龙腾天下" autocomplete="off">
+    <input type="password" id="loginPwd" placeholder="密码（首次可设，也可留空）">
+    <button class="btn btn-gold login-btn" onclick="doLogin()">进入</button>
+    <p class="login-hint" id="loginHint">不同同盟的数据互不干扰，可随时切换</p>
+  </div>
+</div>
+
 <div class="overlay" id="modal">
   <div class="modal">
     <h3 id="modalTitle">表单</h3>
@@ -603,13 +650,19 @@
 </div>
 
 <script>
-const STORE_KEY = 'sgs_union_mgr_v1';
-let state = {
-  profile: { name: '', server: '', season: '', level: '' },
-  notice: '',
-  members: [],
-  territory: []
-};
+const STORE_KEY = 'sgs_union_mgr_v1';        // 旧版数据键（用于首次迁移）
+const META_KEY = 'sgs_union_meta_v1';        // 同盟账号清单
+const ACTIVE_KEY = 'sgs_union_active_v1';    // 当前选中的同盟
+let alliance = null;
+function emptyState(){
+  return {
+    profile: { name: '', server: '', season: '', level: '' },
+    notice: '',
+    members: [],
+    territory: []
+  };
+}
+let state = emptyState();
 let sort = { key: 'power', dir: -1 };
 let modalCb = null;
 
@@ -626,25 +679,107 @@ function fmtDate(iso){ if(!iso) return ''; const d = new Date(iso); return d.get
 function fmtDT(iso){ if(!iso) return ''; const d = new Date(iso); return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function nowLocalInput(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
 
-function save(){
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+function allianceKey(name){ return 'sgs_union_mgr_v1__' + encodeURIComponent(name); }
+function simpleHash(str){
+  let h = 5381;
+  for(let i = 0; i < str.length; i++){ h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; }
+  return 'h' + h.toString(16);
 }
-function load(){
+function getMeta(){
+  try{ return JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; }catch(e){ return {}; }
+}
+function saveMeta(m){ localStorage.setItem(META_KEY, JSON.stringify(m)); }
+function save(){
+  if(alliance) localStorage.setItem(allianceKey(alliance), JSON.stringify(state));
+}
+function loadAlliance(name){
+  alliance = name;
+  const raw = localStorage.getItem(allianceKey(name));
+  state = emptyState();
   try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(raw){
-      const s = JSON.parse(raw);
-      state = {
-        profile: Object.assign({name:'',server:'',season:'',level:''}, s.profile || {}),
-        notice: s.notice || '',
-        members: Array.isArray(s.members) ? s.members : [],
-        territory: Array.isArray(s.territory) ? s.territory : []
-      };
+    if(raw) state = JSON.parse(raw);
+    state.profile = Object.assign(emptyState().profile, state.profile || {});
+    state.notice = state.notice || '';
+    if(!Array.isArray(state.members)) state.members = [];
+    if(!Array.isArray(state.territory)) state.territory = [];
+    // 旧版数据迁移（仅当该同盟还没有数据时）
+    const legacy = localStorage.getItem(STORE_KEY);
+    if(!raw && legacy){
+      try{
+        const s = JSON.parse(legacy);
+        if(Array.isArray(s.members) || Array.isArray(s.territory)){
+          if(confirm('检测到旧版本的数据，要导入到同盟「' + name + '」吗？')){
+            state = {
+              profile: Object.assign(emptyState().profile, s.profile || {}),
+              notice: s.notice || '',
+              members: Array.isArray(s.members) ? s.members : [],
+              territory: Array.isArray(s.territory) ? s.territory : []
+            };
+            localStorage.removeItem(STORE_KEY);
+          }
+        }
+      }catch(e){}
     }
   }catch(e){
-    console.warn('读取本地数据失败', e);
+    console.warn('读取同盟数据失败', e);
+  }
+  save();
+  renderAll();
+}
+
+/* ---------- 登录 / 同盟切换 ---------- */
+function initAuth(){
+  const active = localStorage.getItem(ACTIVE_KEY);
+  if(active){
+    loadAlliance(active);
+    $('#loginOverlay').classList.add('hidden');
+  }else{
+    showLogin();
   }
 }
+function showLogin(){
+  const meta = getMeta();
+  const names = Object.keys(meta.alliances || {}).sort((a,b) => a.localeCompare(b, 'zh'));
+  $('#loginChips').innerHTML = names.length
+    ? names.map(n => '<button class="chip-auth" onclick="fillLogin(\'' + esc(n).replace(/'/g,"\\'") + '\')">' + esc(n) + '</button>').join('')
+    : '<span class="login-none">还没有同盟，输入名称即可创建</span>';
+  $('#loginName').value = '';
+  $('#loginPwd').value = '';
+  $('#loginHint').textContent = '不同同盟的数据互不干扰；密码仅用于本机区分，可留空';
+  $('#loginOverlay').classList.remove('hidden');
+  setTimeout(() => $('#loginName').focus(), 80);
+}
+function fillLogin(n){ $('#loginName').value = n; $('#loginPwd').focus(); }
+function doLogin(){
+  const name = $('#loginName').value.trim();
+  const pwd = $('#loginPwd').value;
+  if(!name){ $('#loginHint').textContent = '请先填写同盟名称'; return; }
+  const meta = getMeta();
+  meta.alliances = meta.alliances || {};
+  const existing = meta.alliances[name];
+  if(existing){
+    if(existing.hash !== null && existing.hash !== simpleHash(pwd)){
+      $('#loginHint').textContent = '密码不正确';
+      return;
+    }
+  }else{
+    if(!confirm('同盟「' + name + '」还不存在，要创建吗？（以后用这个名字 + 密码进入）')) return;
+    meta.alliances[name] = { hash: pwd ? simpleHash(pwd) : null, createdAt: new Date().toISOString() };
+    saveMeta(meta);
+  }
+  localStorage.setItem(ACTIVE_KEY, name);
+  loadAlliance(name);
+  $('#loginOverlay').classList.add('hidden');
+}
+function logout(){
+  if(confirm('确定退出当前同盟吗？')){
+    localStorage.removeItem(ACTIVE_KEY);
+    alliance = null;
+    showLogin();
+  }
+}
+$('#loginName').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+$('#loginPwd').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
 
 /* ---------- 通用弹窗 ---------- */
 function openModal(title, fields, values, cb){
@@ -883,6 +1018,7 @@ function renderHeadStats(){
     '<span class="head-stat">领地 <b>'+state.territory.length+'</b></span>';
   const t = state.profile.name;
   $('#appTitle').textContent = t ? '⚔ ' + t : '⚔ 同盟管理';
+  $('#allianceBadge').textContent = alliance ? '当前同盟：' + alliance : '';
 }
 
 function renderMembers(){
@@ -1437,8 +1573,7 @@ function renderAll(){
   renderTerritory();
 }
 
-load();
-renderAll();
+initAuth();
 </script>
 </body>
 </html>
