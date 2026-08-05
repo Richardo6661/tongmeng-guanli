@@ -446,12 +446,11 @@
           <tr>
             <th>坐标</th>
             <th>类型</th>
-            <th>等级</th>
-            <th>归属成员</th>
-            <th>小组</th>
-            <th>占领日期</th>
-            <th>备注</th>
-            <th>操作</th>
+              <th>等级</th>
+              <th>归属成员</th>
+              <th>小组</th>
+              <th>备注</th>
+              <th>操作</th>
           </tr>
         </thead>
         <tbody id="terrRows"></tbody>
@@ -791,7 +790,10 @@ function openModal(title, fields, values, cb){
     const id = 'mf_' + f.key;
     let input;
     if(f.type === 'select'){
-      input = '<select id="'+id+'">' + f.options.map(o => '<option>'+esc(o)+'</option>').join('') + '</select>';
+      input = '<select id="'+id+'">' + f.options.map(o => {
+        if(o && typeof o === 'object') return '<option value="'+esc(o.value)+'">'+esc(o.label)+'</option>';
+        return '<option>'+esc(o)+'</option>';
+      }).join('') + '</select>';
     }else if(f.type === 'textarea'){
       input = '<textarea id="'+id+'" rows="2" placeholder="'+(f.placeholder||'')+'"></textarea>';
     }else{
@@ -883,13 +885,16 @@ function deleteMember(id){
 /* ---------- 领地 ---------- */
 function openTerrForm(id){
   const t = id ? state.territory.find(x => x.id === id) : null;
+  const ownerOptions = [{value:'', label:'（不选）'}];
+  const ownerSet = new Set(state.members.map(m => m.name));
+  state.members.forEach(m => ownerOptions.push({value: m.name, label: m.name}));
+  if(t && t.owner && !ownerSet.has(t.owner)) ownerOptions.push({value: t.owner, label: t.owner});
   openModal(t ? '编辑领地' : '添加领地', [
     {key:'coord', label:'坐标', placeholder:'例如：123,456'},
     {key:'type', label:'类型', type:'select', options:TERR_TYPES},
     {key:'tier', label:'等级', type:'number', placeholder:'1-10'},
-    {key:'owner', label:'归属成员', placeholder:'输入成员昵称'},
+    {key:'owner', label:'归属成员', type:'select', options: ownerOptions},
     {key:'group', label:'分配小组', placeholder:'主力 / 开荒…'},
-    {key:'date', label:'占领日期', type:'date'},
     {key:'note', label:'备注', placeholder:'资源州 / 分城…'}
   ], t, data => {
     if(!data.coord && !data.owner){ alert('请至少填写坐标或归属成员'); return; }
@@ -1125,7 +1130,6 @@ function renderTerritory(){
       <td>${t.tier || '-'}</td>
       <td>${esc(t.owner) || '-'}</td>
       <td>${esc(t.group) || '-'}</td>
-      <td>${fmtDate(t.date) || '-'}</td>
       <td class="note-cell" title="${esc(t.note)}">${esc(t.note)}</td>
       <td>
         <button class="op-btn" onclick="openTerrForm('${t.id}')">编辑</button>
@@ -1592,9 +1596,9 @@ function loadSample(){
       {id:uid(), name:'北地枪王', role:'成员', group:'后勤', power:19800, contribution:15600, contributionWeek:1200000, meritTotal:900000, meritWeek:32000, assistTotal:15000, assistWeek:400, donateTotal:4000000, donateWeek:0, state:'荆州', clan:'无门阀', attacks:3, status:'请假', note:''}
     ];
     state.territory = [
-      {id:uid(), coord:'573,1211', type:'铜矿', tier:10, owner:'', group:'主力', date:'', note:'关中-汉中郡'},
-      {id:uid(), coord:'590,1031', type:'铜矿', tier:10, owner:'', group:'开荒', date:'', note:'关中-汉中郡'},
-      {id:uid(), coord:'318,475', type:'资源地', tier:8, owner:'锦帆贼', group:'', date:'2026-07-30', note:'西线入口'}
+      {id:uid(), coord:'573,1211', type:'铜矿', tier:10, owner:'', group:'主力', note:'关中-汉中郡'},
+      {id:uid(), coord:'590,1031', type:'铜矿', tier:10, owner:'', group:'开荒', note:'关中-汉中郡'},
+      {id:uid(), coord:'318,475', type:'资源地', tier:8, owner:'锦帆贼', group:'', note:'西线入口'}
     ];
     save(); renderAll();
     alert('已载入示例数据');
